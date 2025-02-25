@@ -1,5 +1,6 @@
 from typing import List, Optional, BinaryIO
 import torch
+import uuid
 from langchain_core.documents import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
@@ -27,7 +28,6 @@ class EmbeddingProcessor:
         model_name = "BAAI/bge-large-en-v1.5"
         model_kwargs = {'device': device}
         encode_kwargs = {'normalize_embeddings': True}
-        
         self.embeddings = HuggingFaceEmbeddings(
             model_name=model_name,
             model_kwargs=model_kwargs,
@@ -93,12 +93,17 @@ class EmbeddingProcessor:
             
             # Crear una nueva colección si no se especificó una
             if not collection_name:
-                collection_name = f"user_{user_id}_{len(self.db.get())}"
+                collection_name = f"user_{user_id}_{uuid.uuid4()}"
             
-            # Agregar los documentos y crear la colección si no existe
-            self.db.add_documents(chunks, collection_name=collection_name)
-            logger.info(f"Documentos agregados a la colección {collection_name}")
-            
+            db = Chroma(
+                collection_name=collection_name,
+                persist_directory=self.persist_directory,
+                embedding_function=self.embeddings
+            )
+            # Agregar los documentos a la colección
+            db.add_documents(chunks)
+                
+            logger.info(f"Documentos agregados a la colección {collection_name}")        
             logger.info(f"Documentos almacenados exitosamente en colección {collection_name}")
             return collection_name
             
