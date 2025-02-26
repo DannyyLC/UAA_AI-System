@@ -61,24 +61,13 @@ def main():
     # Realiza la búsqueda
     try:
         print("\nBuscando información relevante...")
-        results = retriever.search(queries=queries, collections=[collections_to_search], top_k=3)
+        results = retriever.search(queries=queries, collections=collections_to_search, top_k=3)
+        context = retriever.extract_text_from_search_results(results)
         
         # Muestra los resultados
         print("\n--- RESULTADOS DE LA BÚSQUEDA ---")
-        for collection, collection_results in results.items():
-            print(f"\nColección: {collection}")
-            
-            for query, documents in collection_results.items():
-                print(f"\n  Consulta: {query}")
-                print(f"  Encontrados {len(documents)} documentos relevantes:")
-                
-                for i, doc in enumerate(documents, 1):
-                    # Mostrar solo una vista previa del contenido para no saturar la salida
-                    content_preview = doc.page_content[:150] + "..." if len(doc.page_content) > 150 else doc.page_content
-                    print(f"    {i}. {content_preview}")
-                    print(f"       Metadata: {doc.metadata}")
-                    print()
-    
+        print(context)
+        
     except ValueError as e:
         print(f"Error en la búsqueda: {str(e)}")
     except Exception as e:
