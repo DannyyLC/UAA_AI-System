@@ -1,5 +1,5 @@
 from langchain_ollama import OllamaLLM
-from logging_utils import get_logger
+from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
