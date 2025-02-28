@@ -13,7 +13,7 @@ for collection in collections:
     print(collection)  # Acceder directamente al nombre
 
 # Obtener la colección (cambia el nombre según necesites)
-collection = chroma_client.get_collection(name="machine_learning")
+collection = chroma_client.get_collection(name="programacion")
 
 # Obtener todos los documentos almacenados
 documents = collection.get()  # Sin filtros, obtiene todos

@@ -1,8 +1,11 @@
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-from typing import List, Dict
 import torch
+from typing import List, Dict
+from langchain_chroma import Chroma
 from chromadb import PersistentClient
+from langchain_huggingface import HuggingFaceEmbeddings
+from src.shared.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 class Retrieval:
     """Módulo para buscar información en una o varias colecciones de ChromaDB con LangChain."""
@@ -19,12 +22,11 @@ class Retrieval:
         self.persist_directory = persist_directory
         self.client = PersistentClient(path=persist_directory)
         
-        self.collection_instances = {}
-        
+        self.collection_instances = {}      
         self.existing_collections = set(self.client.list_collections())
         
-        print(f"kabffklashdfjahsdfjadshfalksd{self.existing_collections}")
-    
+        logger.info("Iniciando instancia de Retrieval")
+        
     def _get_collection(self, collection_name: str) -> Chroma:
         """
         Obtiene una instancia de Chroma para la colección especificada si existe.
@@ -64,6 +66,7 @@ class Retrieval:
         Raises:
             ValueError: Si alguna de las colecciones especificadas no existe
         """
+        logger.info("Comenzando la busqueda en la base de datos")
         results = {}
         
         self.existing_collections = set(self.client.list_collections())
@@ -80,10 +83,36 @@ class Retrieval:
                 results[collection_name] = collection_results
             except ValueError as e:
                 raise e
-            
+        logger.info("Retornando la informacion obtenida")   
         return results
     
     def get_existing_collections(self) -> List[str]:
         """Devuelve la lista de nombres de colecciones existentes en la base de datos."""
         self.existing_collections = set(self.client.list_collections())
         return list(self.existing_collections)
+    
+    def extract_text_from_search_results(self, search_results: Dict[str, Dict[str, List]]) -> str:
+        """
+        Extrae todo el contenido textual de los resultados de búsqueda y lo combina en un solo string.
+        
+        Args:
+            search_results: El diccionario retornado por la función search() que contiene
+                        resultados organizados por colección y consulta
+        
+        Returns:
+            str: Un string único con todo el contenido de texto extraído
+        """
+        extracted_text = []
+        
+        # Iterar por todas las colecciones
+        for collection_name, collection_data in search_results.items():
+            # Iterar por todas las consultas en esta colección
+            for query, documents in collection_data.items():
+                # Iterar por todos los documentos retornados
+                for doc in documents:
+                    # Extraer el texto del documento y agregarlo a nuestra lista
+                    extracted_text.append(doc.page_content)
+        
+        # Unir todos los textos con un espacio entre ellos
+        combined_text = " ".join(extracted_text)
+        return combined_text

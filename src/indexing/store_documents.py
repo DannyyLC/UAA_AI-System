@@ -110,25 +110,3 @@ class EmbeddingProcessor:
         except Exception as e:
             logger.error(f"Error procesando documentos: {str(e)}")
             raise
-
-    def get_collections(self, user_id: str) -> List[str]:
-        """
-        Obtiene todas las colecciones de un usuario.
-        
-        Args:
-            user_id: ID del usuario
-            
-        Returns:
-            List[str]: Lista de nombres de colecciones
-        """
-        try:
-            all_collections = self.db.get()
-            user_collections = [
-                col for col in all_collections 
-                if col.startswith(f"user_{user_id}_")
-            ]
-            return user_collections
-        except Exception as e:
-            logger.error(f"Error obteniendo colecciones: {str(e)}")
-            raise
-        
