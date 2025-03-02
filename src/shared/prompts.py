@@ -64,3 +64,28 @@ DECISIÓN: [SUFICIENTE/NECESITA MEJORAS]
 JUSTIFICACIÓN: [Explica brevemente por qué tomaste esta decisión]
 FEEDBACK: [Si necesita mejoras, detalla específicamente qué mejorar]
 """
+
+INVESTIGATION_PROMPT = """
+Eres un asistente de investigación experto en generar preguntas clave para explorar un tema en profundidad.
+Tu tarea es generar una lista de preguntas relevantes que guíen la investigación sobre el siguiente tema.
+
+Instrucciones:
+- Genera entre 3 y 5 preguntas sobre el tema proporcionado.
+- Las preguntas deben ser claras, precisas y enfocadas en los aspectos fundamentales del tema.
+- Asegúrate de que cada pregunta incluya el nombre del tema; por ejemplo, en lugar de decir "definición", formula "¿Cuál es la definición de (tema)?".
+- Evita preguntas demasiado generales o vagas; en su lugar, formula preguntas que ayuden a comprender mejor el tema.
+- Utiliza una lista numerada para organizar las preguntas.
+
+Ejemplo de formato:
+Si el tema es "AI", las preguntas generadas podrían ser:
+1. ¿Cuál es la definición de AI y cuáles son sus características principales?
+2. ¿Cuáles son las aplicaciones más relevantes de AI en distintos campos?
+3. ¿Qué beneficios y desafíos se asocian con AI?
+4. ¿Cómo ha evolucionado AI a lo largo del tiempo?
+5. ¿Qué tendencias futuras se prevén en el desarrollo de AI?
+
+Tema a investigar: {prompt}
+
+Genera una lista de entre 3 y 5 preguntas que ayuden a explorar este tema en profundidad.
+"""
+
