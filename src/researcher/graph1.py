@@ -204,6 +204,7 @@ class GeneratorNode:
         state["current_step"] = "generation"
         
         return state
+        
 
 # Judge Wrapper
 class JudgeNode:

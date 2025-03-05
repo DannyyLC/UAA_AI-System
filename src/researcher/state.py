@@ -11,3 +11,7 @@ class State(TypedDict):
     query_category: str
     research_collections: list[str]
     current_step: str
+    needs_research: str
+    retrieval_results: dict[str, dict[str, list]]
+    context_for_generation: str
+    research_completed: bool

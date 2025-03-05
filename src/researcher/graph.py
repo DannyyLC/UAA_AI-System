@@ -11,6 +11,7 @@ from typing import Literal, Dict, Any
 from src.shared.models import get_llm
 from langgraph.graph import StateGraph, END, START
 from src.shared.logging_utils import get_logger
+from src.researcher.judge import Judge
 from typing import List
 
 logger = get_logger(__name__)
@@ -96,6 +97,7 @@ def investigation(state: State) -> State:
         "ecuaciones_diferenciales": ["math_concepts", "differential_equations"]
     }
     
+    #********Creo que general knowledge deberia ser el tema que estamos buscando pero no estoy seguro********
     state["research_collections"] = collection_mapping.get(category, ["general_knowledge"])
     
     # Update current step
@@ -103,6 +105,71 @@ def investigation(state: State) -> State:
     
     return state
 
+#***Creo que podriamos hacer que la clase Router tuviera atributos estaticos y que el metodo classify fuera estatico tambien para no tener que instanciarlo***
+
+def router(state: State) -> State:
+    logger.info("Executing query router")
+    router = Router()
+
+    # Classify the query using the Router
+    query = state["current_query"]
+    category = router.classify_with_llm(query)
+    
+    # Update state with classification result
+    state["query_category"] = category
+    
+    # Determine if research is needed based on category
+    # Assume general category doesn't need research, others do
+    state["needs_research"] = category != "general"
+    
+    # Update current step
+    state["current_step"] = "routing"
+    
+    return state
+
+def retrieval(state: State) -> State:
+    retriever = Retrieval(persist_directory="./chroma_db")
+
+    if not state["needs_research"]:
+        logger.info("Skipping retrieval - not needed")
+        return state
+        
+    logger.info("Executing retrieval")
+    
+    try:
+        # Execute retrieval with queries and collections from state
+        queries = state["retrieval_queries"]
+        collections = state["research_collections"]
+        
+        # Get available collections and filter to those that exist
+        available_collections = retriever.get_existing_collections()
+        valid_collections = [c for c in collections if c in available_collections]
+        
+        if not valid_collections:
+            logger.warning(f"No valid collections found among: {collections}")
+            valid_collections = ["general_knowledge"]  # Fallback
+        
+        # Perform search
+        search_results = retriever.search(queries, valid_collections)
+        
+        # Extract text from results
+        context_text = retriever.extract_text_from_search_results(search_results)
+        
+        # Update state
+        state["retrieval_results"] = search_results
+        state["context_for_generation"] = context_text
+        state["research_completed"] = True
+        
+    except Exception as e:
+        logger.error(f"Error in retrieval: {str(e)}")
+        state["retrieval_results"] = {}
+        state["context_for_generation"] = ""
+        state["research_completed"] = False
+    
+    # Update current step
+    state["current_step"] = "retrieval"
+    
+    return state
 
 def build_graph():
     builder = StateGraph(State)
@@ -111,9 +178,9 @@ def build_graph():
     builder.add_node("start", START)
     builder.add_node("input", input)
     builder.add_node("response", response)
-    builder.add_node("router", ...)
-    builder.add_node("investigation", ...)
-    builder.add_node("retrieval", ...)
+    builder.add_node("router", router)
+    builder.add_node("investigation", investigation)
+    builder.add_node("retrieval", retrieval)
     builder.add_node("judge", ...) # IA as a Judge graph
     builder.add_node("end", END)
 
