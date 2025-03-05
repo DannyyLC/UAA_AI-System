@@ -1,92 +1,97 @@
-from src.researcher.state import RefinerState
-from src.researcher.response import GeneradorRespuestas
-from src.researcher.judge import Judge
-from typing import Literal, Dict, Any 
-from src.shared.logging_utils import get_logger
 from langgraph.graph import StateGraph, END
+from src.researcher.state import State
+from src.researcher.investigation import generate_research_plan
+from src.researcher.judge_graph import generar_respuesta_refinada
+from src.researcher.router import Router
+from src.researcher.response import GeneradorRespuestas
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_community.llms import ollama
+from src.researcher.retrieval import Retrieval
+from typing import Literal, Dict, Any
+from src.shared.models import get_llm
+from langgraph.graph import StateGraph, END, START
+from src.shared.logging_utils import get_logger
+from typing import List
 
 logger = get_logger(__name__)
 
-# Router para decidir el siguiente paso
-def router(state: RefinerState) -> Literal["mejorar", "finalizar"]:
-    return state["resultado"]
+# Functions, Clases and objects of the graph
 
-# Crear el grafo de LangGraph
-def crear_sistema_refinamiento(model_name: str = "mistral", max_iteraciones: int = 3, umbral_calidad: float = 8.5):
-    # Inicializar los nodos
-    generador = GeneradorRespuestas(model_name=model_name)
-    juez = Judge(model_name=model_name, umbral_calidad=umbral_calidad)
-    
-    # Crear el grafo
-    workflow = StateGraph(RefinerState)
-    
-    # Agregar nodos
-    workflow.add_node("generador", generador)
-    workflow.add_node("juez", juez)
-    
-    # Definir el flujo: Entrada -> Generador -> Juez -> [Mejorar o Finalizar]
-    workflow.set_entry_point("generador")
-    workflow.add_edge("generador", "juez")
-    workflow.add_conditional_edges(
-        "juez",
-        router,
-        {
-            "mejorar": "generador",
-            "finalizar": END
-        }
-    )
-    
-    # Compilar el grafo
-    app = workflow.compile()
-    
-    return app
-
-# Función para ejecutar el sistema completo
-async def generar_respuesta_refinada(
-    contexto: str, 
-    prompt_adicional: str = "", 
-    model_name: str = "mistral",
-    max_iteraciones: int = 3,
-    umbral_calidad: float = 8.5
-) -> Dict[str, Any]:
+# Node input
+def input(state: State) -> State:
     """
-    Genera una respuesta refinada iterativamente usando el sistema de generación-evaluación.
+    Captura la pregunta del usuario y la almacena en el estado.
+    """
+    user_question = input("Usuario: ") 
+    user_message = HumanMessage(content=user_question)
+    state["investigation"] = True
     
+    state.investigation = True
+
+    return {
+            **state,
+            "messages": state["messages"] + [user_message],
+    }
+
+# Node response
+def response(state: State) -> State:
+    """
+    Genera una respuesta usando el modelo Mistral de Ollama.
     Args:
-        contexto: String con el contexto de la consulta
-        prompt_adicional: Instrucciones adicionales
-        model_name: Modelo de Ollama a utilizar
-        max_iteraciones: Número máximo de iteraciones permitidas
-        umbral_calidad: Puntuación mínima (0-10) para considerar una respuesta como suficiente
-        
+        state (State): El estado actual del grafo de investigación.
     Returns:
-        Dict: Estado final con la respuesta y metadatos
+        State: Estado actualizado con la respuesta generada.
     """
-    # Crear el sistema
-    sistema = crear_sistema_refinamiento(model_name, max_iteraciones, umbral_calidad)
+    last_message = state["messages"][-1].content
+    llm = get_llm(model_name="llama3.2:1b", temperature=0.1)  
     
-    # Estado inicial
-    estado_inicial = RefinerState(
-        contexto=contexto,
-        prompt_adicional=prompt_adicional,
-        respuesta_actual="",
-        feedback="",
-        iteraciones=0,
-        max_iteraciones=max_iteraciones,
-        resultado="mejorar",  # Comenzar con generación
-        calidad_respuesta=0.0,  # Inicializar puntuación en 0
-        mejora_necesaria=True   # Inicialmente asumimos que necesitará mejoras
-    )
-    
-    # Ejecutar el flujo
     try:
-        resultado = await sistema.ainvoke(estado_inicial)
-        return resultado
-    except Exception as e:
-        logger.error(f"Error en la ejecución del grafo: {str(e)}")
+        response_text = llm.invoke(last_message)
+        ai_response = AIMessage(content=response_text)
         return {
-            "respuesta_actual": f"Error en el sistema: {str(e)}",
-            "iteraciones": 0,
-            "max_iteraciones": max_iteraciones,
-            "calidad_respuesta": 0.0
+            **state,
+            "messages": state["messages"] + [ai_response]
         }
+    
+    except Exception as e:
+        error_message = AIMessage(content=f"Error al generar respuesta: {str(e)}")
+        
+        return {
+            **state,
+            "messages": state["messages"] + [error_message]
+        }
+
+
+
+def build_graph():
+    builder = StateGraph(State)
+
+    # Nodes
+    builder.add_node("start", START)
+    builder.add_node("input", input)
+    builder.add_node("response", response)
+    builder.add_node("router", ...)
+    builder.add_node("investigation", ...)
+    builder.add_node("retrieval", ...)
+    builder.add_node("judge", ...) # IA as a Judge graph
+    builder.add_node("end", END)
+
+    # Edges
+    builder.add_edge("start", "input")
+    builder.add_conditional_edges(
+        source_node="input",
+        condition=lambda state: state["investigation"],
+        paths={
+            True: "router",
+            False: "response"
+        }
+    )
+    builder.add_edge("response", "end") # Genera una resuesta final directa
+    builder.add_edge("router", "investigation") # Comienza con el flujo de la investigacion
+    builder.add_edge("investigation", "retrieval")
+    builder.add_edge("retrieval", "judge")
+    builder.add_edge("judge", "end")
+
+    # Compila y retorna el grafo
+    graph = builder.compile()
+    return graph

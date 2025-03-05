@@ -1,7 +1,7 @@
 from langchain_ollama import OllamaLLM
 from src.shared.prompts import JUDGE_PROMPT
 from src.shared.logging_utils import get_logger
-from src.researcher.state import RefinerState
+from src.researcher.judge_state import RefinerState
 
 logger = get_logger(__name__)
 

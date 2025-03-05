@@ -1,12 +1,7 @@
-from typing import TypedDict, Literal
+from typing import TypedDict, Annotated
+from langchain_core.messages import AnyMessage 
+import operator
 
-class RefinerState(TypedDict):
-    contexto: str                  # Contexto original
-    prompt_adicional: str          # Instrucciones adicionales
-    respuesta_actual: str          # Respuesta generada actual
-    feedback: str                  # Retroalimentación del juez
-    iteraciones: int               # Número de iteraciones realizadas
-    max_iteraciones: int           # Número máximo de iteraciones permitidas
-    resultado: Literal["mejorar", "finalizar"]  # Decisión del juez
-    calidad_respuesta: float       # Puntuación de calidad (0-10)
-    mejora_necesaria: bool         # Indicador si la respuesta necesita mejoras
+class State(TypedDict):
+    messages: Annotated[list[AnyMessage], operator.add]
+    investigation: bool # Bandera la cual indicara si el usuarrio esta dispuesto a hacer una investigacion

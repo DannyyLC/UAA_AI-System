@@ -72,3 +72,4 @@ async def generate_research_plan(prompt: str, model: str = "llama3:8b") -> list[
             "Comparar diferentes perspectivas sobre el tema",
             "Redactar un resumen con las conclusiones más importantes"
         ]
+        

@@ -1,7 +1,7 @@
 from langchain_ollama import OllamaLLM
 from src.shared.prompts import RESPONSE_GENERATOR
 from src.shared.logging_utils import get_logger
-from src.researcher.state import RefinerState
+from src.researcher.judge_state import RefinerState
 
 logger = get_logger(__name__)
 
@@ -44,15 +44,3 @@ class GeneradorRespuestas:
             state["respuesta_actual"] = error_msg
             state["resultado"] = "finalizar"  # En caso de error, terminar
             return state
-
-
-
-# Ejemplo de uso:
-# respuesta = await generar_respuesta_refinada(
-#     contexto="Texto extraído del retrieval...",
-#     prompt_adicional="Genera un resumen conciso de este texto...",
-#     umbral_calidad=8.5  # Terminará antes si alcanza 8.5/10 o superior
-# )
-# print(f"Respuesta final (después de {respuesta['iteraciones']} iteraciones):")
-# print(f"Calidad: {respuesta['calidad_respuesta']}/10")
-# print(respuesta["respuesta_actual"])

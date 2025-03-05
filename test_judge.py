@@ -5,7 +5,7 @@ from langchain_ollama import OllamaLLM
 import requests
 
 # Importar la función principal del sistema de refinamiento mejorado
-from src.researcher.graph import generar_respuesta_refinada
+from src.researcher.judge_graph import generar_respuesta_refinada
 
 # Configurar logger
 logger = get_logger("main_improved")
@@ -78,7 +78,7 @@ async def main():
             contexto=contexto_ejemplo,
             prompt_adicional=prompt_adicional,
             model_name=modelo_seleccionado,
-            max_iteraciones=3,  # Permitimos hasta 5 iteraciones
+            max_iteraciones=3,  # Permitimos hasta 3 iteraciones
             umbral_calidad=umbral  # Usando el umbral actual
         )
         
@@ -111,7 +111,7 @@ async def main():
         contexto=contexto_cientifico,
         prompt_adicional=prompt_cientifico,
         model_name=modelo_seleccionado,
-        max_iteraciones=4,
+        max_iteraciones=3,
         umbral_calidad=8.5  # Umbral intermedio
     )
     

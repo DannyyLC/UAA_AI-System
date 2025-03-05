@@ -116,3 +116,4 @@ class Retrieval:
         # Unir todos los textos con un espacio entre ellos
         combined_text = " ".join(extracted_text)
         return combined_text
+    
