@@ -27,6 +27,7 @@ def input(state: State) -> State:
     state["investigation"] = True
     
     state.investigation = True
+    state["current_query"] = user_question
 
     return {
             **state,
@@ -61,6 +62,46 @@ def response(state: State) -> State:
             "messages": state["messages"] + [error_message]
         }
 
+def investigation(state: State) -> State:
+    if not state["needs_research"]:
+        logger.info("Skipping research planning - not needed")
+        return state
+        
+    logger.info("Executing research planning")
+    
+    # Generate research plan
+    query = state["current_query"]
+    plan = generate_research_plan(query)
+    
+    # Update state with research plan
+    state["research_plan"] = plan
+    
+    # Prepare queries for retrieval based on research plan
+    # Using the original query and adding queries derived from the plan
+    retrieval_queries = [query]
+    for step in plan:  # Lo cambie para que use todo el plan de investigacion porque si no puede que pierda sentido
+        retrieval_queries.append(f"{query} {step}")
+    
+    state["retrieval_queries"] = retrieval_queries
+    
+    # Determine which collections to search based on category
+    category = state["query_category"]
+    # This mapping would need to be configured based on your collections
+    
+    #********Debemos cambiar esto pero no se como lo tengamos configurado ********
+    collection_mapping = {
+        "programacion": ["programming_docs", "code_examples"],
+        "estructura_de_datos": ["data_structures", "algorithms"],
+        "unix": ["unix_docs", "command_references"],
+        "ecuaciones_diferenciales": ["math_concepts", "differential_equations"]
+    }
+    
+    state["research_collections"] = collection_mapping.get(category, ["general_knowledge"])
+    
+    # Update current step
+    state["current_step"] = "research_planning"
+    
+    return state
 
 
 def build_graph():
