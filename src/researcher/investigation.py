@@ -4,7 +4,7 @@ from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-async def generate_research_plan(prompt: str, model: str = "llama3:8b") -> list[str]:
+async def generate_research_plan(prompt: str, model: str = "llama3.2:1b") -> list[str]:
     """Genera un plan de investigación paso a paso basado en un prompt de usuario utilizando Ollama.
 
     Args:

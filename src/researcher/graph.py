@@ -89,15 +89,15 @@ async def investigation(state: State) -> State:
     # This mapping would need to be configured based on your collections
     
     #********Debemos cambiar esto pero no se como lo tengamos configurado ********
-    collection_mapping = {
-        "programacion": ["programming_docs", "code_examples"],
-        "estructura_de_datos": ["data_structures", "algorithms"],
-        "unix": ["unix_docs", "command_references"],
-        "ecuaciones_diferenciales": ["math_concepts", "differential_equations"]
-    }
+    # collection_mapping = {
+    #     "programacion": ["programming_docs", "code_examples"],
+    #     "estructura_de_datos": ["data_structures", "algorithms"],
+    #     "unix": ["unix_docs", "command_references"],
+    #     "ecuaciones_diferenciales": ["math_concepts", "differential_equations"]
+    # }
     
     #********Creo que general knowledge deberia ser el tema que estamos buscando pero no estoy seguro********
-    state["research_collections"] = collection_mapping.get(category, ["general_knowledge"])
+    state["research_collections"] = category   # collection_mapping.get(category, ["general"])
     
     # Update current step
     state["current_step"] = "research_planning"
@@ -113,7 +113,7 @@ def router(state: State) -> State:
     # Classify the query using the Router
     query = state["current_query"]
     category = router.classify_with_llm(query)
-    
+    category.replace('"', "")
     # Update state with classification result
     state["query_category"] = category
     
@@ -139,7 +139,8 @@ def retrieval(state: State) -> State:
     try:
         # Execute retrieval with queries and collections from state
         queries = state["retrieval_queries"]
-        collections = state["research_collections"]
+        collections = ["programacion"]   #state["research_collections"] ################# Aqui se ve el problema!!!!
+        print("COLLECTIONS:", collections)
         
         # Get available collections and filter to those that exist
         available_collections = retriever.get_existing_collections()
@@ -147,7 +148,7 @@ def retrieval(state: State) -> State:
         
         if not valid_collections:
             logger.warning(f"No valid collections found among: {collections}")
-            valid_collections = ["general_knowledge"]  # Fallback
+            valid_collections = ["general"]  # Fallback
         
         # Perform search
         search_results = retriever.search(queries, valid_collections)
