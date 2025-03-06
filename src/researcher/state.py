@@ -4,7 +4,7 @@ import operator
 
 class State(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
-    investigation: bool # Bandera la cual indicara si el usuarrio esta dispuesto a hacer una investigacion
+    investigation: bool 
     current_query: str
     research_plan: list[str]
     retrieval_queries: list[str]

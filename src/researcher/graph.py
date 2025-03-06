@@ -3,35 +3,32 @@ from src.researcher.state import State
 from src.researcher.investigation import generate_research_plan
 from src.researcher.judge_graph import generar_respuesta_refinada
 from src.researcher.router import Router
-from src.researcher.response import GeneradorRespuestas
 from langchain_core.messages import HumanMessage, AIMessage
-from langchain_community.llms import ollama
 from src.researcher.retrieval import Retrieval
-from typing import Literal, Dict, Any
 from src.shared.models import get_llm
 from langgraph.graph import StateGraph, END, START
 from src.shared.logging_utils import get_logger
-from src.researcher.judge import Judge
-from typing import List
+from src.researcher.judge_state import RefinerState
+
 
 logger = get_logger(__name__)
 
 # Functions, Clases and objects of the graph
 
 # Node input
-def input(state: State) -> State:
+def user_input(state: State) -> State:
     """
     Captura la pregunta del usuario y la almacena en el estado.
     """
-    user_question = input("Usuario: ") 
+    user_question = state.get("current_query") 
     user_message = HumanMessage(content=user_question)
     state["investigation"] = True
-    
-    state.investigation = True
+   
     state["current_query"] = user_question
-
+      
     return {
             **state,
+            "investigation": True,
             "messages": state["messages"] + [user_message],
     }
 
@@ -63,6 +60,7 @@ def response(state: State) -> State:
             "messages": state["messages"] + [error_message]
         }
 
+# Node investigation
 def investigation(state: State) -> State:
     if not state["needs_research"]:
         logger.info("Skipping research planning - not needed")
@@ -105,8 +103,8 @@ def investigation(state: State) -> State:
     
     return state
 
-#***Creo que podriamos hacer que la clase Router tuviera atributos estaticos y que el metodo classify fuera estatico tambien para no tener que instanciarlo***
-
+# to do
+# Node Router 
 def router(state: State) -> State:
     logger.info("Executing query router")
     router = Router()
@@ -127,6 +125,7 @@ def router(state: State) -> State:
     
     return state
 
+# Node Retrieval
 def retrieval(state: State) -> State:
     retriever = Retrieval(persist_directory="./chroma_db")
 
@@ -171,35 +170,80 @@ def retrieval(state: State) -> State:
     
     return state
 
+# Node Judge(IA as a Judge)
+async def judge_node(state: State):
+    """
+    Nodo del grafo que utiliza la función generar_respuesta_refinada
+    para refinar la respuesta basada en el contexto de investigación.
+    """
+    logger.info("Iniciando nodo judge para refinamiento de respuesta")
+    
+    # Extraemos los datos necesarios del estado
+    contexto = state["context_for_generation"]
+    prompt_adicional = state["current_query"]
+    model_name = "llama3.2:1b"  
+    
+    # Utilizamos directamente la función existente
+    resultado = await generar_respuesta_refinada(
+        contexto=contexto,
+        prompt_adicional=prompt_adicional,
+        model_name=model_name,
+        max_iteraciones=3,
+        umbral_calidad=8.5
+    )
+    
+    logger.info(f"Refinamiento completado: {resultado['iteraciones']} iteraciones, "
+                f"calidad: {resultado['calidad_respuesta']}/10")
+    
+    # Actualizamos el estado con la respuesta refinada
+    ai_response = AIMessage(
+        content=resultado["respuesta_actual"],
+        additional_kwargs={
+            "calidad": resultado["calidad_respuesta"],
+            "iteraciones": resultado["iteraciones"],
+            "feedback": resultado.get("feedback", "")
+        }
+    )
+
+    return {
+            **state,
+            "messages": state["messages"] + [ai_response],
+            "research_completed": True
+        }
+
+# Building the graph
 def build_graph():
     builder = StateGraph(State)
 
     # Nodes
-    builder.add_node("start", START)
-    builder.add_node("input", input)
+    builder.add_node("input", user_input)
     builder.add_node("response", response)
     builder.add_node("router", router)
-    builder.add_node("investigation", investigation)
+    builder.add_node("research", investigation)
     builder.add_node("retrieval", retrieval)
-    builder.add_node("judge", ...) # IA as a Judge graph
-    builder.add_node("end", END)
+    builder.add_node("judge", judge_node)
 
     # Edges
-    builder.add_edge("start", "input")
+    builder.add_edge(START, "input")
     builder.add_conditional_edges(
-        source_node="input",
-        condition=lambda state: state["investigation"],
-        paths={
+        source="input",
+        path=lambda state: True if state.get("investigation", False) else False,
+        path_map={
             True: "router",
             False: "response"
         }
     )
-    builder.add_edge("response", "end") # Genera una resuesta final directa
-    builder.add_edge("router", "investigation") # Comienza con el flujo de la investigacion
-    builder.add_edge("investigation", "retrieval")
+    builder.add_edge("response", END) 
+    builder.add_edge("router", "research") 
+    builder.add_edge("research", "retrieval")
     builder.add_edge("retrieval", "judge")
-    builder.add_edge("judge", "end")
+    builder.add_edge("judge", END)
 
     # Compila y retorna el grafo
     graph = builder.compile()
+    
     return graph
+
+
+# TO DO
+# hacer que la clase Router tuviera atributos estaticos y que el metodo classify fuera estatico tambien para no tener que instanciarlo
