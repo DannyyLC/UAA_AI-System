@@ -61,7 +61,7 @@ def response(state: State) -> State:
         }
 
 # Node investigation
-def investigation(state: State) -> State:
+async def investigation(state: State) -> State:
     if not state["needs_research"]:
         logger.info("Skipping research planning - not needed")
         return state
@@ -70,19 +70,20 @@ def investigation(state: State) -> State:
     
     # Generate research plan
     query = state["current_query"]
-    plan = generate_research_plan(query)
-    
+    plan = await generate_research_plan(query)
+
     # Update state with research plan
     state["research_plan"] = plan
     
     # Prepare queries for retrieval based on research plan
     # Using the original query and adding queries derived from the plan
     retrieval_queries = [query]
+
     for step in plan:  # Lo cambie para que use todo el plan de investigacion porque si no puede que pierda sentido
         retrieval_queries.append(f"{query} {step}")
     
     state["retrieval_queries"] = retrieval_queries
-    
+
     # Determine which collections to search based on category
     category = state["query_category"]
     # This mapping would need to be configured based on your collections
