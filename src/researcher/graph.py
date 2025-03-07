@@ -98,7 +98,8 @@ async def investigation(state: State) -> State:
     
     #********Creo que general knowledge deberia ser el tema que estamos buscando pero no estoy seguro********
     state["research_collections"] = category   # collection_mapping.get(category, ["general"])
-    
+    print("CATEGIRAAAAAA")
+    print(category)
     # Update current step
     state["current_step"] = "research_planning"
     
@@ -114,6 +115,8 @@ def router(state: State) -> State:
     query = state["current_query"]
     category = router.classify_with_llm(query)
     category.replace('"', "")
+    category = remove_accents(category)  # Quita los acentos
+
     # Update state with classification result
     state["query_category"] = category
     
@@ -125,6 +128,12 @@ def router(state: State) -> State:
     state["current_step"] = "routing"
     
     return state
+
+import unicodedata
+
+def remove_accents(text):
+    return ''.join(c for c in unicodedata.normalize('NFKD', text) if not unicodedata.combining(c))
+
 
 # Node Retrieval
 def retrieval(state: State) -> State:
@@ -139,7 +148,8 @@ def retrieval(state: State) -> State:
     try:
         # Execute retrieval with queries and collections from state
         queries = state["retrieval_queries"]
-        collections = ["programacion"]   #state["research_collections"] ################# Aqui se ve el problema!!!!
+        collections = []
+        collections.append(state["research_collections"])
         print("COLLECTIONS:", collections)
         
         # Get available collections and filter to those that exist
