@@ -1,4 +1,7 @@
 import asyncio
+import os
+from io import BytesIO
+from src.indexing import EmbeddingProcessor
 from src.shared.logging_utils import get_logger
 from typing import Dict, Any
 from langchain_core.messages import HumanMessage
@@ -74,15 +77,36 @@ async def process_query():
         logger.error(f"Error al procesar la consulta: {str(e)}")
         print(f"Error: {str(e)}")
 
-def index_documents():
+async def index_documents():
     """Maneja la opción de indexación de documentos."""
-    print("\n=== Modo de Indexación ===")
-    print("Indexando documentos... Esta funcionalidad está pendiente de implementación.")
-    # Aquí iría el código para indexar documentos
-    # Por ejemplo:
-    # retriever = Retrieval(persist_directory="./chroma_db")
-    # retriever.index_documents(...)
+    pdf_path = input("Dame el nombre del archivo: ")
+    collection = input("Dame el nombre de la coleccion: ")
+    
+    # Crear instancia del procesador
+    embedding_processor = EmbeddingProcessor(persist_directory="./chroma_db")
 
+    # Leer el archivo PDF
+    with open(pdf_path, 'rb') as pdf_file:
+        pdf_content = pdf_file.read()
+    
+    # Crear el BytesIO con el contenido del PDF
+    pdf_bytes = BytesIO(pdf_content)
+    
+    # Obtener el nombre del archivo del path
+    pdf_name = os.path.basename(pdf_path)
+    
+    # Crear la lista de documentos
+    documents = [(pdf_bytes, pdf_name)]
+    
+    # Procesar y almacenar embeddings
+    collection_name = await embedding_processor.process_and_store(
+        documents=documents,
+        user_id="usuario_123",
+        collection_name=collection
+    )
+    
+    print(f"Embeddings almacenados en la colección: {collection_name}")
+    
 async def main():
     """Función principal que muestra el menú y maneja las opciones."""
     while True:
@@ -94,7 +118,7 @@ async def main():
         choice = input("Selecciona una opción (1-3): ")
         
         if choice == "1":
-            index_documents()
+            await index_documents()
         elif choice == "2":
             await process_query()
         elif choice == "3":
