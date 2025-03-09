@@ -28,7 +28,7 @@ def user_input(state: State) -> State:
       
     return {
             **state,
-            "investigation": False,
+            "investigation": True,
             "messages": state["messages"] + [user_message],
     }
 
@@ -98,8 +98,6 @@ async def investigation(state: State) -> State:
     
     #********Creo que general knowledge deberia ser el tema que estamos buscando pero no estoy seguro********
     state["research_collections"] = category   # collection_mapping.get(category, ["general"])
-    print("CATEGORIAAAAAA")
-    print(category)
     # Update current step
     state["current_step"] = "research_planning"
     
@@ -114,7 +112,8 @@ def router(state: State) -> State:
     query = state["current_query"]
     category = router.classify_with_llm(query)
     category.replace('"', "")
-    category = remove_accents(category)  # Quita los acentos
+    category.replace("'", "")
+    category = remove_accents(category) 
 
     # Update state with classification result
     state["query_category"] = category
@@ -146,7 +145,6 @@ def retrieval(state: State) -> State:
         queries = state["retrieval_queries"]
         collections = []
         collections.append(state["research_collections"])
-        print("COLLECTIONS:", collections)
         
         # Get available collections and filter to those that exist
         available_collections = retriever.get_existing_collections()
@@ -154,7 +152,7 @@ def retrieval(state: State) -> State:
         
         if not valid_collections:
             logger.warning(f"No valid collections found among: {collections}")
-            valid_collections = ["general"]  # Fallback
+            valid_collections = ["programacion"]  # Fallback # Tenemos que crear una categoria con conocimiento general
         
         # Perform search
         search_results = retriever.search(queries, valid_collections)

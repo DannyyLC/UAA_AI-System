@@ -54,6 +54,8 @@ class DocumentProcessor:
         
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         logger.info(f"Using {self.device}")
+        
+        self.mime = magic.Magic(mime=True)
 
     @timing_decorator
     async def process_documents(self, files: List[tuple[BinaryIO, str]]) -> List[Document]:
@@ -67,13 +69,12 @@ class DocumentProcessor:
             List[Document]: Lista de documentos procesados
         """
         processed_documents = []
-        mime = magic.Magic(mime=True)
         
         for file, filename in files:
             try:
                 # Detectar tipo MIME
                 file_content = file.read()
-                mime_type = mime.from_buffer(file_content)
+                mime_type = self.mime.from_buffer(file_content)
                 
                 if mime_type not in self.file_sources:
                     logger.info(f"Tipo de archivo no soportado para {filename}: {mime_type}")

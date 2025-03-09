@@ -9,7 +9,7 @@ from src.researcher.graph import build_graph
 
 logger = get_logger(__name__)
 
-async def run_graph_with_query(query: str) -> Dict[str, Any]:
+async def run_graph_with_query(query: str, graph, state) -> Dict[str, Any]:
     """
     Ejecuta el grafo de investigación con una consulta específica.
     
@@ -20,49 +20,35 @@ async def run_graph_with_query(query: str) -> Dict[str, Any]:
         Dict[str, Any]: El estado final tras ejecutar el grafo.
     """
     try:
-        # Construir el grafo
-        print("Construyendo grafo...")
-        graph = build_graph()
-        
-        # Estado inicial
-        print("Creando estado inicial...")
-        initial_state = {
-            "messages": [HumanMessage(content=query)],
-            "investigation": True,
-            "current_query": query,
-            "research_plan": [],
-            "retrieval_queries": [],
-            "query_category": "",
-            "research_collections": [],
-            "current_step": "",
-            "needs_research": False,
-            "retrieval_results": {},
-            "context_for_generation": "",
-            "research_completed": False
-        }
         
         # Ejecutar el grafo
         print(f"Iniciando grafo con consulta: {query}")
-        result = await graph.ainvoke(initial_state)
+        result = await graph.ainvoke(state)
         
         return result
     except Exception as e:
         logger.error(f"Error en run_graph_with_query: {str(e)}")
         raise
 
-async def process_query():
+async def process_query(graph, state):
     """Maneja la opción de consulta al sistema."""
     print("\n=== Modo de Consulta ===")
     query = input("Ingresa tu pregunta: ")
     
     try:
+        # Agregar el mensaje de usuario al historial
+        state["messages"].append(HumanMessage(content=query))
+        state["current_query"] = query
+        
         # Ejecutar el grafo con la consulta
-        final_state = await run_graph_with_query(query)
+        final_state = await run_graph_with_query(query, graph, state)
+        
+        state.update(final_state)
         
         # Mostrar respuesta
         print("\n=== Respuesta ===")
-        if final_state["messages"] and len(final_state["messages"]) > 1:
-            ai_response = final_state["messages"][-1]
+        if state["messages"] and len(state["messages"]) > 1:
+            ai_response = state["messages"][-1]
             print(ai_response.content)
             
             # Si hay metadatos disponibles, mostrarlos
@@ -77,13 +63,10 @@ async def process_query():
         logger.error(f"Error al procesar la consulta: {str(e)}")
         print(f"Error: {str(e)}")
 
-async def index_documents():
+async def index_documents(embedding_processor: EmbeddingProcessor):
     """Maneja la opción de indexación de documentos."""
     pdf_path = input("Dame el nombre del archivo: ")
     collection = input("Dame el nombre de la coleccion: ")
-    
-    # Crear instancia del procesador
-    embedding_processor = EmbeddingProcessor(persist_directory="./chroma_db")
 
     # Leer el archivo PDF
     with open(pdf_path, 'rb') as pdf_file:
@@ -109,6 +92,29 @@ async def index_documents():
     
 async def main():
     """Función principal que muestra el menú y maneja las opciones."""
+    # Instancias
+    embedding_processor = EmbeddingProcessor(persist_directory="./chroma_db")
+    # Construir el grafo
+    print("Construyendo grafo...")
+    graph = build_graph()
+    
+    # Estado inicial
+    print("Creando estado inicial...")
+    state = {
+        "messages": [],
+        "investigation": True,
+        "current_query": "",
+        "research_plan": [],
+        "retrieval_queries": [],
+        "query_category": "",
+        "research_collections": [],
+        "current_step": "",
+        "needs_research": False,
+        "retrieval_results": {},
+        "context_for_generation": "",
+        "research_completed": False
+    }
+    
     while True:
         print("\n=== Sistema de Investigación ===")
         print("1. Indexar documentos")
@@ -118,9 +124,9 @@ async def main():
         choice = input("Selecciona una opción (1-3): ")
         
         if choice == "1":
-            await index_documents()
+            await index_documents(embedding_processor)
         elif choice == "2":
-            await process_query()
+            await process_query(graph, state)
         elif choice == "3":
             print("Saliendo del sistema. ¡Hasta pronto!")
             break
