@@ -8,7 +8,7 @@ from src.researcher.retrieval import Retrieval
 from src.shared.models import get_llm
 from langgraph.graph import StateGraph, END, START
 from src.shared.logging_utils import get_logger
-from src.researcher.judge_state import RefinerState
+import unicodedata
 
 
 logger = get_logger(__name__)
@@ -22,13 +22,13 @@ def user_input(state: State) -> State:
     """
     user_question = state.get("current_query") 
     user_message = HumanMessage(content=user_question)
-    state["investigation"] = True
+    state["investigation"] = False
    
     state["current_query"] = user_question
       
     return {
             **state,
-            "investigation": True,
+            "investigation": False,
             "messages": state["messages"] + [user_message],
     }
 
@@ -98,14 +98,13 @@ async def investigation(state: State) -> State:
     
     #********Creo que general knowledge deberia ser el tema que estamos buscando pero no estoy seguro********
     state["research_collections"] = category   # collection_mapping.get(category, ["general"])
-    print("CATEGIRAAAAAA")
+    print("CATEGORIAAAAAA")
     print(category)
     # Update current step
     state["current_step"] = "research_planning"
     
     return state
 
-# to do
 # Node Router 
 def router(state: State) -> State:
     logger.info("Executing query router")
@@ -129,11 +128,8 @@ def router(state: State) -> State:
     
     return state
 
-import unicodedata
-
 def remove_accents(text):
     return ''.join(c for c in unicodedata.normalize('NFKD', text) if not unicodedata.combining(c))
-
 
 # Node Retrieval
 def retrieval(state: State) -> State:
@@ -239,14 +235,21 @@ def build_graph():
     builder.add_edge(START, "input")
     builder.add_conditional_edges(
         source="input",
-        path=lambda state: True if state.get("investigation", False) else False,
+        path=lambda state: True if state.get("investigation") == True else False,
         path_map={
             True: "router",
             False: "response"
         }
     )
     builder.add_edge("response", END) 
-    builder.add_edge("router", "research") 
+    builder.add_conditional_edges(
+        source="router",
+        path=lambda state: "response" if state.get("query_category") == "general" else "research",
+        path_map={
+            "response": "response",
+            "research": "research"
+        }
+    )
     builder.add_edge("research", "retrieval")
     builder.add_edge("retrieval", "judge")
     builder.add_edge("judge", END)
