@@ -6,6 +6,9 @@ from src.shared.logging_utils import get_logger
 from typing import Dict, Any
 from langchain_core.messages import HumanMessage
 from src.researcher.graph import build_graph  
+from src.researcher.router import Router
+from src.researcher.retrieval import Retrieval
+from src.researcher.judge_graph import crear_sistema_refinamiento
 
 logger = get_logger(__name__)
 
@@ -97,7 +100,9 @@ async def main():
     # Construir el grafo
     print("Construyendo grafo...")
     graph = build_graph()
-    
+    model_name = "llama3.2:1b"
+    judge_graph = crear_sistema_refinamiento(model_name=model_name)
+
     # Estado inicial
     print("Creando estado inicial...")
     state = {
@@ -112,7 +117,10 @@ async def main():
         "needs_research": False,
         "retrieval_results": {},
         "context_for_generation": "",
-        "research_completed": False
+        "research_completed": False,
+        "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
+        "router_obj" : Router(),
+        "judge_obj" : judge_graph
     }
     
     while True:

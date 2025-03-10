@@ -1,6 +1,8 @@
 from typing import TypedDict, Annotated
 from langchain_core.messages import AnyMessage 
 import operator
+from src.researcher.router import Router
+from src.researcher.retrieval import Retrieval
 
 class State(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
@@ -15,3 +17,6 @@ class State(TypedDict):
     retrieval_results: dict[str, dict[str, list]]
     context_for_generation: str
     research_completed: bool
+    router_obj: Router
+    retrieval_obj: Retrieval
+    judge_obj: object

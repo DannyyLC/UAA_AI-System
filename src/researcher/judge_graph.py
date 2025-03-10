@@ -44,10 +44,9 @@ def crear_sistema_refinamiento(model_name: str = "mistral", max_iteraciones: int
 # Función para ejecutar el sistema completo
 async def generar_respuesta_refinada(
     contexto: str, 
-    prompt_adicional: str = "", 
-    model_name: str = "mistral",
-    max_iteraciones: int = 3,
-    umbral_calidad: float = 8.5
+    judge_graph,
+    max_iteraciones,
+    prompt_adicional: str = ""
 ) -> Dict[str, Any]:
     """
     Genera una respuesta refinada iterativamente usando el sistema de generación-evaluación.
@@ -63,7 +62,7 @@ async def generar_respuesta_refinada(
         Dict: Estado final con la respuesta y metadatos
     """
     # Crear el sistema
-    sistema = crear_sistema_refinamiento(model_name, max_iteraciones, umbral_calidad)
+    sistema = judge_graph
     
     # Estado inicial
     estado_inicial = RefinerState(

@@ -106,13 +106,14 @@ async def investigation(state: State) -> State:
 # Node Router 
 def router(state: State) -> State:
     logger.info("Executing query router")
-    router = Router()
+    router = state["router_obj"]
 
     # Classify the query using the Router
     query = state["current_query"]
     category = router.classify_with_llm(query)
-    category.replace('"', "")
-    category.replace("'", "")
+
+    category = category.replace('"', "")
+    category = category.replace("'", "")
     category = remove_accents(category) 
 
     # Update state with classification result
@@ -132,7 +133,7 @@ def remove_accents(text):
 
 # Node Retrieval
 def retrieval(state: State) -> State:
-    retriever = Retrieval(persist_directory="./chroma_db")
+    retriever = state["retrieval_obj"]
 
     if not state["needs_research"]:
         logger.info("Skipping retrieval - not needed")
@@ -187,15 +188,14 @@ async def judge_node(state: State):
     # Extraemos los datos necesarios del estado
     contexto = state["context_for_generation"]
     prompt_adicional = state["current_query"]
-    model_name = "llama3.2:1b"  
+      
     
     # Utilizamos directamente la función existente
     resultado = await generar_respuesta_refinada(
         contexto=contexto,
         prompt_adicional=prompt_adicional,
-        model_name=model_name,
-        max_iteraciones=3,
-        umbral_calidad=8.5
+        judge_graph=state["judge_obj"],
+        max_iteraciones = 3
     )
     
     logger.info(f"Refinamiento completado: {resultado['iteraciones']} iteraciones, "
@@ -256,7 +256,3 @@ def build_graph():
     graph = builder.compile()
     
     return graph
-
-
-# TO DO
-# hacer que la clase Router tuviera atributos estaticos y que el metodo classify fuera estatico tambien para no tener que instanciarlo
