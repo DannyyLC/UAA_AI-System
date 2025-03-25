@@ -4,71 +4,12 @@ channels:
   - nvidia
   - conda-forge
   - defaults
-  - https://repo.anaconda.com/pkgs/main
-  - https://repo.anaconda.com/pkgs/r
-  - https://repo.anaconda.com/pkgs/msys2
 dependencies:
-  - blas=1.0=mkl
-  - bzip2=1.0.8=h2bbff1b_6
-  - ca-certificates=2024.12.31=haa95532_0
-  - certifi=2024.12.14=pyhd8ed1ab_0
-  - cuda-cccl=12.6.77=0
-  - cuda-cccl_win-64=12.6.77=0
-  - cuda-cudart=12.1.105=0
-  - cuda-cudart-dev=12.1.105=0
-  - cuda-cupti=12.1.105=0
-  - cuda-libraries=12.1.0=0
-  - cuda-libraries-dev=12.1.0=0
-  - cuda-nvrtc=12.1.105=0
-  - cuda-nvrtc-dev=12.1.105=0
-  - cuda-nvtx=12.1.105=0
-  - cuda-opencl=12.6.77=0
-  - cuda-opencl-dev=12.6.77=0
-  - cuda-profiler-api=12.6.77=0
-  - cuda-runtime=12.1.0=0
-  - cuda-version=12.6=3
-  - intel-openmp=2023.1.0=h59b6b97_46320
-  - libcublas=12.1.0.26=0
-  - libcublas-dev=12.1.0.26=0
-  - libcufft=11.0.2.4=0
-  - libcufft-dev=11.0.2.4=0
-  - libcurand=10.3.7.77=0
-  - libcurand-dev=10.3.7.77=0
-  - libcusolver=11.4.4.55=0
-  - libcusolver-dev=11.4.4.55=0
-  - libcusparse=12.0.2.55=0
-  - libcusparse-dev=12.0.2.55=0
-  - libffi=3.4.4=hd77b12b_1
-  - libjpeg-turbo=3.0.3=h827c3e9_0
-  - libnpp=12.0.2.50=0
-  - libnpp-dev=12.0.2.50=0
-  - libnvjitlink=12.1.105=0
-  - libnvjitlink-dev=12.1.105=0
-  - libnvjpeg=12.1.1.14=0
-  - libnvjpeg-dev=12.1.1.14=0
-  - libpng=1.6.39=h8cc25b3_0
-  - libuv=1.48.0=h827c3e9_0
-  - libwebp=1.2.4=h2bbff1b_0
-  - libwebp-base=1.2.4=h2bbff1b_1
-  - mkl=2023.1.0=h6b88ed4_46358
-  - openssl=3.4.0=ha4e3fda_1
-  - pip=24.2=py310haa95532_0
-  - python=3.10.16=h4607a30_1
-  - pytorch=2.5.1=py3.10_cuda12.1_cudnn9_0
-  - pytorch-cuda=12.1=hde6ce7c_6
-  - pytorch-mutex=1.0=cuda
-  - setuptools=75.1.0=py310haa95532_0
-  - sqlite=3.45.3=h2bbff1b_0
-  - tbb=2021.8.0=h59b6b97_0
-  - tk=8.6.14=h0416ee5_0
-  - typing_extensions=4.12.2=py310haa95532_0
-  - ucrt=10.0.22621.0=h57928b3_1
-  - vc=14.40=haa95532_2
-  - vc14_runtime=14.42.34433=he29a5d6_23
-  - vs2015_runtime=14.42.34433=hdffcdeb_23
-  - wheel=0.44.0=py310haa95532_0
-  - xz=5.4.6=h8cc25b3_1
-  - zlib=1.2.13=h8cc25b3_1
+  - python=3.10
+  - pytorch=2.5.1
+  - pytorch-cuda=12.1
+  - pip
+  - blas=1.0
   - pip:
       - aiofiles==24.1.0
       - aiohappyeyeballs==2.4.4
@@ -224,14 +165,13 @@ dependencies:
       - pypdf2==3.0.1
       - pypika==0.48.9
       - pyproject-hooks==1.2.0
-      - pyreadline3==3.5.4
       - pytest==8.3.4
       - pytest-asyncio==0.25.1
       - python-dateutil==2.9.0.post0
       - python-docx==1.1.2
       - python-dotenv==1.0.1
       - python-iso639==2024.10.22
-      - python-magic-bin==0.4.14
+      - python-magic==0.4.27
       - python-oxmsg==0.0.1
       - pytz==2024.2
       - pyyaml==6.0.2
@@ -260,9 +200,6 @@ dependencies:
       - tiktoken==0.8.0
       - tokenizers==0.20.3
       - tomli==2.2.1
-      - torch==2.5.1
-      - torchaudio==2.5.1
-      - torchvision==0.20.1
       - tqdm==4.67.1
       - transformers==4.46.3
       - typer==0.15.1
@@ -281,4 +218,3 @@ dependencies:
       - wsproto==1.2.0
       - yarl==1.18.3
       - zipp==3.21.0
-prefix: C:\Users\cerva\miniconda3\envs\rag-Agent
