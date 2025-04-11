@@ -123,6 +123,8 @@ async def main():
         "judge_obj" : judge_graph
     }
     
+    state["router_obj"].retriever = state["retrieval_obj"]
+
     while True:
         print("\n=== Sistema de Investigación ===")
         print("1. Indexar documentos")
