@@ -9,13 +9,14 @@ from src.researcher.judge_graph import crear_sistema_refinamiento
 from data.questions import questions
 import time
 import pandas as pd
+import asyncio
 
 logger = get_logger(__name__)
 
 # Instancias
 embedding_processor = EmbeddingProcessor(persist_directory="./chroma_db")
 # Construir el grafo
-print("Construyendo grafo...")
+logger.info("CONSTRUYENDO GRAFO")
 graph = build_graph()
 model_name = "llama3.2:1b"
 judge_graph = crear_sistema_refinamiento(model_name=model_name)
@@ -219,5 +220,6 @@ async def evaluationpd(graph, state):
     return df_final
 
 #evaluation(state=state, graph=graph)
-
-df_resultados = evaluationpd(graph, state)
+    
+if __name__ == "__main__":
+    asyncio.run(evaluationpd(graph=graph, state=state))

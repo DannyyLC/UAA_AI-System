@@ -23,7 +23,7 @@ class Retrieval:
         self.client = PersistentClient(path=persist_directory)
         
         self.collection_instances = {}      
-        self.existing_collections = {col.name for col in self.client.list_collections()}
+        self.existing_collections = set(self.client.list_collections())
 
         
         logger.info("Iniciando instancia de Retrieval")
@@ -70,7 +70,7 @@ class Retrieval:
         logger.info("Comenzando la busqueda en la base de datos")
         results = {}
         
-        self.existing_collections = {col.name for col in self.client.list_collections()}
+        self.existing_collections = set(self.client.list_collections())
 
         
         for collection_name in collections:
@@ -90,7 +90,7 @@ class Retrieval:
     
     def get_existing_collections(self) -> List[str]:
         """Devuelve la lista de nombres de colecciones existentes en la base de datos."""
-        self.existing_collections = {col.name for col in self.client.list_collections()}
+        self.existing_collections = set(self.client.list_collections())
         return list(self.existing_collections)
     
     def extract_text_from_search_results(self, search_results: Dict[str, Dict[str, List]]) -> str:
