@@ -139,3 +139,6 @@ fisica = [
     "¿Qué es la astrofísica?",
     "¿Qué es la teoría de cuerdas?"
 ]
+
+questions = []
+questions = tecnologia + ia + matematicas + quimica + leyes + finanzas + biologia + automotriz + medicina + fisica
