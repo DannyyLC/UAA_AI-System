@@ -81,7 +81,7 @@ class Retrieval:
                 
                 results[collection_name] = collection_results
             except ValueError as e:
-                raise e  
+                raise e
         return results
     
     def get_existing_collections(self) -> List[str]:

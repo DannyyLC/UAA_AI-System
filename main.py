@@ -154,7 +154,7 @@ async def main():
     # Construir el grafo
     print("Construyendo grafo...")
     graph = build_graph()
-    model_name = "llama3.2:1b"
+    model_name = "gemma3"
     judge_graph = crear_sistema_refinamiento(model_name=model_name)
 
     # Estado inicial
@@ -173,8 +173,9 @@ async def main():
         "context_for_generation": "",
         "research_completed": False,
         "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
-        "router_obj" : Router(),
-        "judge_obj" : judge_graph
+        "router_obj" : Router(model_name),
+        "judge_obj" : judge_graph,
+        "response_model" : model_name
     }
     
     state["router_obj"].retriever = state["retrieval_obj"]
