@@ -1,0 +1,12 @@
+Preguntas,Tiempos por pregunta,Respuestas,Metadatos,Tiempo total
+Que es el machine learning?,65.39437317848206,"Basado en el texto proporcionado, el Machine Learning (ML) es un campo de la inteligencia artificial que utiliza técnicas matemáticas y estadísticas para analizar y procesar grandes cantidades de datos.  En el contexto de la educación, se está utilizando para predecir situaciones como el rendimiento académico, la deserción escolar, o incluso, las percepciones de estudiantes y profesores. Su efectividad depende de que los datos sean correctamente etiquetados y sean éticos, evitando sesgos que podrían afectar la precisión de los modelos.
+","{'calidad': 9.0, 'iteraciones': 1, 'feedback': ''}",287.85522389411926
+Para que sirve el machine learning?,26.019089937210083,"Según el texto proporcionado, los resultados de la implementación de Machine Learning (ML) o Inteligencia Artificial (IA) en la educación se centran principalmente en la **predicción del rendimiento académico**. En concreto, el algoritmo de **Random Forest** ha demostrado ser el más efectivo, logrando una precisión del 99% en la predicción del rendimiento, según un estudio de Houngue et al. (2022).  Otros algoritmos de ML también han mostrado un nivel predictivo superior al de los modelos clásicos gracias a su capacidad para aprender patrones complejos en los datos.  En resumen, el ML se usa para identificar a los estudiantes con mayor riesgo de bajo rendimiento y, potencialmente, para ofrecer intervenciones personalizadas.
+","{'calidad': 0.0, 'iteraciones': 1, 'feedback': ''}",287.85522389411926
+Como se implementa el machine learning?,193.67723941802979,"La respuesta a tu pregunta, basándonos en el texto proporcionado, es que el Machine Learning se implementa a través de la aplicación de técnicas y algoritmos que permiten a los sistemas informáticos aprender de los datos y realizar tareas que normalmente requieren inteligencia humana.  Específicamente, el texto menciona las siguientes técnicas de aprendizaje supervisado (que son las que se implican en la implementación):
+
+*   **Artificial Neural Networks (ANN)** -  (Redes Neuronales Artificiales)
+*   **Stacking Emsemble Learning**
+
+El texto no profundiza en *cómo* se implementan exactamente estas técnicas, pero las menciona como las herramientas a utilizar para mejorar los procesos de enseñanza-aprendizaje y gestión educativa.
+","{'calidad': 8.0, 'iteraciones': 1, 'feedback': ''}",287.85522389411926

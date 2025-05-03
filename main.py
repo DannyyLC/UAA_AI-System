@@ -93,6 +93,60 @@ async def index_documents(embedding_processor: EmbeddingProcessor):
     
     print(f"Embeddings almacenados en la colección: {collection_name}")
     
+async def process_query_multiple_models(query):
+    models = ["gemma3", "mistral"]
+
+    for model in models:
+        logger.info(f"\n============= RESPUESTA {model.upper()} =============")
+        # Construir el grafo
+        graph = build_graph()
+        model_name = model
+        judge_graph = crear_sistema_refinamiento(model_name=model_name)
+
+        state = {
+            "messages": [],
+            "investigation": True,
+            "current_query": "",
+            "research_plan": [],
+            "retrieval_queries": [],
+            "query_category": "",
+            "research_collections": [],
+            "current_step": "",
+            "needs_research": False,
+            "retrieval_results": {},
+            "context_for_generation": "",
+            "research_completed": False,
+            "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
+            "router_obj" : Router(model_name=model),
+            "judge_obj" : judge_graph,
+            "response_model" : model
+        }
+
+        state["router_obj"].retriever = state["retrieval_obj"]
+
+        # Agregar el mensaje de usuario al historial
+        state["messages"].append(HumanMessage(content=query))
+        state["current_query"] = query
+
+        final_state = await run_graph_with_query(query, graph, state)
+        
+        state.update(final_state)
+        
+        # Mostrar respuesta
+        print("\n=== Respuesta ===")
+        if state["messages"] and len(state["messages"]) > 1:
+            ai_response = state["messages"][-1]
+            print(ai_response.content)
+            
+            # Si hay metadatos disponibles, mostrarlos
+            if hasattr(ai_response, "additional_kwargs") and ai_response.additional_kwargs:
+                print("\n=== Metadatos ===")
+                for key, value in ai_response.additional_kwargs.items():
+                    print(f"{key}: {value}")
+        else:
+            print("No se obtuvo una respuesta.")
+
+
 async def main():
     """Función principal que muestra el menú y maneja las opciones."""
     # Instancias
@@ -136,7 +190,22 @@ async def main():
         if choice == "1":
             await index_documents(embedding_processor)
         elif choice == "2":
-            await process_query(graph, state)
+            while True:
+                print("\n1. Realizar query en modelo por defecto")
+                print("2. Realizar query en todos los modelos")
+                print("3. Regresar a menu principal")
+
+                choice_query = input("Selecciona una opción (1-3): ")
+
+                if choice_query == "1":
+                    await process_query(graph, state)
+                elif choice_query == "2":
+                    query = input("Ingresa tu pregunta: ")
+                    await process_query_multiple_models(query=query)
+                elif choice_query == "3":
+                    break
+                else:
+                    print("Opción no válida. Por favor, intenta de nuevo.")
         elif choice == "3":
             print("Saliendo del sistema. ¡Hasta pronto!")
             break

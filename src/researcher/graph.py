@@ -42,7 +42,8 @@ def response(state: State) -> State:
         State: Estado actualizado con la respuesta generada.
     """
     last_message = state["messages"][-1].content
-    llm = get_llm(model_name="llama3.2:1b", temperature=0.1)  
+    model = state["response_model"]
+    llm = get_llm(model_name=model, temperature=0.1)  
     
     try:
         response_text = llm.invoke(last_message)
@@ -64,13 +65,12 @@ def response(state: State) -> State:
 async def investigation(state: State) -> State:
     if not state["needs_research"]:
         logger.info("Skipping research planning - not needed")
-        return state
-        
-    logger.info("Executing research planning")
+        return state    
     
     # Generate research plan
     query = state["current_query"]
-    plan = await generate_research_plan(query)
+    model = state["response_model"]
+    plan = await generate_research_plan(query, model=model)
 
     # Update state with research plan
     state["research_plan"] = plan
@@ -105,7 +105,6 @@ async def investigation(state: State) -> State:
 
 # Node Router 
 def router(state: State) -> State:
-    logger.info("Executing query router")
     router = state["router_obj"]
 
     # Classify the query using the Router
@@ -139,7 +138,6 @@ def retrieval(state: State) -> State:
         logger.info("Skipping retrieval - not needed")
         return state
         
-    logger.info("Executing retrieval")
     
     try:
         # Execute retrieval with queries and collections from state
@@ -150,7 +148,6 @@ def retrieval(state: State) -> State:
         # Get available collections and filter to those that exist
         available_collections = retriever.get_existing_collections()
         valid_collections = [c for c in collections if c in available_collections]
-        
         if not valid_collections:
             logger.warning(f"No valid collections found among: {collections}")
             valid_collections = ["programacion"]  # Fallback # Tenemos que crear una categoria con conocimiento general
@@ -183,7 +180,6 @@ async def judge_node(state: State):
     Nodo del grafo que utiliza la función generar_respuesta_refinada
     para refinar la respuesta basada en el contexto de investigación.
     """
-    logger.info("Iniciando nodo judge para refinamiento de respuesta")
     
     # Extraemos los datos necesarios del estado
     contexto = state["context_for_generation"]

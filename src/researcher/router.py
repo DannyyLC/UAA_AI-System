@@ -7,19 +7,16 @@ logger = get_logger(__name__)
 class Router:
     """Clase para enrutar consultas a diferentes categorías."""
 
-    def __init__(self):
-        self.llm = get_llm(model_name="llama3.2:1b", temperature=0.1)  
+    def __init__(self, model_name : str = "llama3:8b"):
+        self.llm = get_llm(model_name, temperature=0.1)  
         self.available_subjects = "programacion, estructura_de_datos, unix, ecuaciones_diferenciales"
-        logger.info("Creando instancia de Router")
         self.retriever = None
         
     def classify_with_llm(self, query: str) -> str:
         """Clasifica la consulta usando el modelo de lenguaje con el prompt de clasificación."""
         try:
-            logger.info("Clasificando consulta")
             available_subjects = self.retriever.get_existing_collections()
             prompt = ROUTER_PROMPT.format(materias=available_subjects, query=query)
-            
             category = self.llm.invoke(prompt)
             logger.info(f"Consulta clasificada como: {category.strip()}")
             return category.strip()

@@ -22,11 +22,9 @@ class Retrieval:
         self.persist_directory = persist_directory
         self.client = PersistentClient(path=persist_directory)
         
-        self.collection_instances = {}      
-        self.existing_collections = set(self.client.list_collections())
-
-        
-        logger.info("Iniciando instancia de Retrieval")
+        self.collection_instances = {}
+        self.existing_collections = self.client.list_collections()
+        self.existing_collections = [c.name for c in self.existing_collections]
         
     def _get_collection(self, collection_name: str) -> Chroma:
         """
@@ -67,11 +65,10 @@ class Retrieval:
         Raises:
             ValueError: Si alguna de las colecciones especificadas no existe
         """
-        logger.info("Comenzando la busqueda en la base de datos")
         results = {}
         
-        self.existing_collections = set(self.client.list_collections())
-
+        self.existing_collections = self.client.list_collections()
+        self.existing_collections = [c.name for c in self.existing_collections]
         
         for collection_name in collections:
             try:
@@ -84,13 +81,13 @@ class Retrieval:
                 
                 results[collection_name] = collection_results
             except ValueError as e:
-                raise e
-        logger.info("Retornando la informacion obtenida")   
+                raise e  
         return results
     
     def get_existing_collections(self) -> List[str]:
         """Devuelve la lista de nombres de colecciones existentes en la base de datos."""
-        self.existing_collections = set(self.client.list_collections())
+        self.existing_collections = self.client.list_collections()
+        self.existing_collections = [c.name for c in self.existing_collections]
         return list(self.existing_collections)
     
     def extract_text_from_search_results(self, search_results: Dict[str, Dict[str, List]]) -> str:

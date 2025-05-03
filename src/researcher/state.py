@@ -20,3 +20,4 @@ class State(TypedDict):
     router_obj: Router
     retrieval_obj: Retrieval
     judge_obj: object
+    response_model: str
