@@ -1,7 +1,7 @@
 version: '3'
 services:
   rag-app:
-    image: rag-image
+    build: .
     ports:
       - "8000:8000"
       - "11434:11434"

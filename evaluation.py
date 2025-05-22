@@ -6,19 +6,17 @@ from src.researcher.graph import build_graph
 from src.researcher.router import Router
 from src.researcher.retrieval import Retrieval
 from src.researcher.judge_graph import crear_sistema_refinamiento
-#from data.questions import questions
+from data.questions import questions
 import time
 import pandas as pd
 import asyncio
 
 logger = get_logger(__name__)
 
-questions = ["Que es el machine learning?", "Para que sirve el machine learning?", "Como se implementa el machine learning?"]
-
 # Instancias
 embedding_processor = EmbeddingProcessor(persist_directory="./chroma_db")
 
-models = ["gemma3", "mistral"]
+models = ["gemma3:4b", "mistral:7b","llama3:8b"]
 
 async def run_graph_with_query(query: str, graph, state) -> Dict[str, Any]:
     """
@@ -220,8 +218,6 @@ async def evaluationpd():
     df_final.to_csv('resultados_finales.csv', index=False)
     
     return df_final
-
-#evaluation(state=state, graph=graph)
     
 if __name__ == "__main__":
     asyncio.run(evaluationpd())

@@ -1,17 +1,17 @@
 """ Listas con las preguntas con las cuales se evaluara el desempeño de los modelos 
             Se estaran usando aproximadamente 10 preguntas de cada area"""
 # Tecnologia
-tecnologia = [
-    "¿Qué es un sistema operativo?",
-    "¿Cuál es la diferencia entre hardware y software?",
-    "¿Qué significa la sigla 'URL'?",
-    "¿Qué es la nube informática?",
-    "¿Qué es el Internet de las Cosas (IoT)?",
-    "¿Qué es un firewall y para qué se utiliza?",
-    "¿Qué es la programación orientada a objetos?",
-    "¿Qué es la computación cuántica?",
-    "¿Qué es el blockchain y cómo funciona?",
-    "¿Qué es la realidad aumentada y cómo se diferencia de la realidad virtual?"
+redes = [
+    "¿Cuál es la diferencia entre una dirección IP pública y una privada?",
+    "¿Qué es el modelo OSI y cuáles son sus 7 capas?",
+    "¿Cómo funciona el protocolo TCP y en qué se diferencia de UDP?",
+    "¿Qué es una máscara de subred y para qué sirve?",
+    "¿Qué es el protocolo ARP y cómo se utiliza en una red local?",
+    "¿Qué diferencia hay entre una red LAN, MAN y WAN?",
+    "¿Qué es el DNS y cómo resuelve nombres de dominio?",
+    "¿Cómo se detectan y previenen ataques de tipo spoofing en redes?",
+    "¿Cómo se implementa NAT y cuál es su función en una red doméstica?",
+    "¿Cuál es la diferencia entre HTTP y HTTPS?"
 ]
 
 # IA
@@ -99,17 +99,17 @@ biologia = [
 ]
 
 # Automotriz
-automotriz = [
-    "¿Qué es un motor de combustión interna?",
-    "¿Cuál es la diferencia entre tracción delantera y tracción trasera?",
-    "¿Qué es la transmisión de un vehículo?",
-    "¿Qué es la suspensión de un automóvil?",
-    "¿Qué es el sistema de frenos ABS?",
-    "¿Qué es la aerodinámica en el diseño de automóviles?",
-    "¿Qué es la ingeniería automotriz?",
-    "¿Qué es la telemetría en automovilismo?",
-    "¿Qué es la propulsión eléctrica en vehículos?",
-    "¿Qué es la autonomía en vehículos eléctricos?"
+sistemas_operativos = [
+    "¿Cuál es la diferencia entre multiprocesamiento y multitarea?",
+    "¿Qué es un deadlock y cómo se puede evitar?",
+    "¿En qué consiste la planificación de CPU Round Robin y cuáles son sus ventajas?",
+    "¿Qué es la memoria virtual y cómo funciona la paginación?",
+    "¿Cuál es la diferencia entre un proceso y un hilo (thread)?",
+    "¿Cómo se implementa un sistema de archivos en un sistema operativo?",
+    "¿Qué es el modo kernel y modo usuario, y por qué es importante esta separación?",
+    "¿Qué son los semáforos y cómo se utilizan para sincronización de procesos?",
+    "¿Qué es el sistema de planificación por prioridades y qué problemas puede generar?",
+    "¿Cuál es la función del scheduler en un sistema operativo?"
 ]
 
 # Medicina
@@ -141,4 +141,4 @@ fisica = [
 ]
 
 questions = []
-questions = tecnologia + ia + matematicas + quimica + leyes + finanzas + biologia + automotriz + medicina + fisica
+questions = redes + ia + matematicas + quimica + leyes + finanzas + biologia + sistemas_operativos + medicina + fisica
