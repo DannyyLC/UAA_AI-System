@@ -15,34 +15,8 @@ logger = get_logger(__name__)
 
 # Instancias
 embedding_processor = EmbeddingProcessor(persist_directory="./chroma_db")
-# Construir el grafo
-logger.info("CONSTRUYENDO GRAFO")
-graph = build_graph()
-model_name = "llama3.2:1b"
-judge_graph = crear_sistema_refinamiento(model_name=model_name)
-# Estado inicial
-logger.info("CREANDO ESTADO INICIAL")
-state = {
-    "messages": [],
-    "investigation": True,
-    "current_query": "",
-    "research_plan": [],
-    "retrieval_queries": [],
-    "query_category": "",
-    "research_collections": [],
-    "current_step": "",
-    "needs_research": False,
-    "retrieval_results": {},
-    "context_for_generation": "",
-    "research_completed": False,
-    "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
-    "router_obj" : Router(),
-    "judge_obj" : judge_graph
-}
 
-state["router_obj"].retriever = state["retrieval_obj"]
-
-models = ["llama3.1:1b"]
+models = ["gemma3:4b", "mistral:7b","llama3:8b"]
 
 async def run_graph_with_query(query: str, graph, state) -> Dict[str, Any]:
     """
@@ -126,7 +100,7 @@ async def evaluation(graph, state):
         logger.error(f"Error al procesar la consulta: {str(e)}")
         print(f"Error: {str(e)}")
 
-async def evaluationpd(graph, state):
+async def evaluationpd():
     """Maneja la opción de consulta al sistema utilizando pandas para organizar los resultados."""
     logger.info("\n============= COMENZANDO EVALUACION CON PANDAS =============")
     
@@ -137,6 +111,32 @@ async def evaluationpd(graph, state):
         for model in models:
             logger.info(f"\n============= EVALUANDO {model.upper()} =============")
             model_start_time = time.time()
+
+            # Construir el grafo
+            graph = build_graph()
+            model_name = model
+            judge_graph = crear_sistema_refinamiento(model_name=model_name)
+            # Estado inicial
+            state = {
+                "messages": [],
+                "investigation": True,
+                "current_query": "",
+                "research_plan": [],
+                "retrieval_queries": [],
+                "query_category": "",
+                "research_collections": [],
+                "current_step": "",
+                "needs_research": False,
+                "retrieval_results": {},
+                "context_for_generation": "",
+                "research_completed": False,
+                "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
+                "router_obj" : Router(model_name=model),
+                "judge_obj" : judge_graph,
+                "response_model" : model
+            }
+
+            state["router_obj"].retriever = state["retrieval_obj"]
             
             # Diccionario para almacenar los resultados de este modelo
             resultados_modelo = {
@@ -218,8 +218,6 @@ async def evaluationpd(graph, state):
     df_final.to_csv('resultados_finales.csv', index=False)
     
     return df_final
-
-#evaluation(state=state, graph=graph)
     
 if __name__ == "__main__":
-    asyncio.run(evaluationpd(graph=graph, state=state))
+    asyncio.run(evaluationpd())

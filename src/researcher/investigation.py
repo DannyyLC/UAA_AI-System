@@ -14,7 +14,6 @@ async def generate_research_plan(prompt: str, model: str = "llama3.2:1b") -> lis
     Returns:
         list[str]: Lista de pasos a seguir en la investigación.
     """
-    logger.info("Generando plan de investigación con Ollama...")
 
     try:
         # Prompt de sistema para estructurar la respuesta en pasos concretos
@@ -60,7 +59,6 @@ async def generate_research_plan(prompt: str, model: str = "llama3.2:1b") -> lis
                 "Redactar un resumen con las conclusiones más importantes"
             ]
 
-        logger.info(f"Plan de investigación generado con {len(steps)} pasos")
         return steps
 
     except Exception as e:

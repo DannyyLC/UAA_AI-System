@@ -30,7 +30,6 @@ class GeneradorRespuestas:
             
             # Invocar el modelo
             nueva_respuesta = self.llm.invoke(prompt)
-            
             # Actualizar el estado
             state["respuesta_actual"] = nueva_respuesta
             state["iteraciones"] += 1
