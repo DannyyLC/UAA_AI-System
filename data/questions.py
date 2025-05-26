@@ -31,15 +31,15 @@ ia = [
 # Matematicas
 matematicas = [
     "¿Qué es un número primo?",
-    "¿Cuál es la fórmula para calcular el área de un círculo?",
+    "¿Qué es pi?",
     "¿Qué es una función lineal?",
     "¿Qué es la derivada de una función?",
     "¿Qué es una integral definida?",
     "¿Qué es una matriz y para qué se utiliza?",
     "¿Qué es el teorema de Pitágoras y en qué contexto se aplica?",
-    "¿Qué es una serie de Fourier?",
-    "¿Qué es la transformada de Laplace y cuál es su propósito?",
-    "¿Qué es la teoría de grupos en álgebra abstracta?"
+    "¿Para qué se usan los números complejos en la vida real?",
+    "¿Qué significa que una función sea continua y por qué eso es importante?",
+    "¿Qué es un espacio vectorial y cómo se aplica en problemas del mundo real?"
 ]
 
 # Quimica
