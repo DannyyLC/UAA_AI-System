@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar Miniconda con detección automática de arquitectura
+# Instalar Miniconda con detección de arquitectura
 WORKDIR /opt
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
@@ -40,25 +40,37 @@ RUN ARCH=$(uname -m) && \
 
 ENV PATH="/opt/conda/bin:$PATH"
 
-# Copiar archivos del entorno Conda
+# Crear el entorno Python sin usar environment.yml
+RUN conda create -n rag-Agent python=3.10 -y
+
+# Activar el entorno y instalar dependencias específicas por arquitectura
+RUN /opt/conda/envs/rag-Agent/bin/pip install --upgrade pip
+
+# Instalar PyTorch según la arquitectura
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        /opt/conda/envs/rag-Agent/bin/pip install torch==2.5.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121; \
+    else \
+        /opt/conda/envs/rag-Agent/bin/pip install torch==2.5.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
+    fi
+
+# Copiar e instalar el resto de dependencias
 WORKDIR /app
-COPY environment.yml .
+COPY requirements.txt .
 
-# Crear el entorno Conda
-RUN conda env create -f environment.yml && \
-    conda clean -afy
+RUN /opt/conda/envs/rag-Agent/bin/pip install -r requirements.txt
 
-# Configurar el shell para utilizar el entorno Conda
-RUN echo "source activate rag-Agent" > ~/.bashrc
+# Configurar el entorno
 ENV PATH="/opt/conda/envs/rag-Agent/bin:$PATH"
 ENV CONDA_DEFAULT_ENV="rag-Agent"
-
-# Establecer caché para transformers
 ENV TRANSFORMERS_CACHE=/opt/hf_cache
 
-# Descargar el modelo Hugging Face durante la construcción
+# Crear script de activación
+RUN echo "source activate rag-Agent" > ~/.bashrc
+
+# Descargar el modelo Hugging Face
 RUN mkdir -p /opt/hf_cache && \
-    python -c "\
+    /opt/conda/envs/rag-Agent/bin/python -c "\
 from transformers import AutoModel, AutoTokenizer; \
 AutoModel.from_pretrained('BAAI/bge-large-en-v1.5'); \
 AutoTokenizer.from_pretrained('BAAI/bge-large-en-v1.5')"
@@ -66,13 +78,12 @@ AutoTokenizer.from_pretrained('BAAI/bge-large-en-v1.5')"
 # Instalar Ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
-# Exponer los puertos que tu aplicación necesite
 EXPOSE 8000 11434
 
 # Copiar el código de la aplicación
 COPY . .
 
-# Crear un script para descargar múltiples modelos de Ollama durante el inicio
+# Crear script de entrada
 RUN echo '#!/bin/bash\n\
 ollama serve &\n\
 sleep 10\n\
@@ -88,8 +99,5 @@ fi\n\
 kill -TERM $(pgrep ollama)\n\
 exec "$@"' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
-# Usar el script como punto de entrada
 ENTRYPOINT ["/app/entrypoint.sh"]
-
-# Mantener el contenedor en ejecución después de iniciar Ollama
 CMD ["sh", "-c", "ollama serve && tail -f /dev/null"]
