@@ -24,11 +24,20 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar Miniconda
+# Instalar Miniconda con detección automática de arquitectura
 WORKDIR /opt
-RUN curl -o miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh"; \
+    else \
+        echo "Arquitectura no soportada: $ARCH" && exit 1; \
+    fi && \
+    curl -o miniconda.sh $MINICONDA_URL && \
     bash miniconda.sh -b -p /opt/conda && \
     rm miniconda.sh
+
 ENV PATH="/opt/conda/bin:$PATH"
 
 # Copiar archivos del entorno Conda
