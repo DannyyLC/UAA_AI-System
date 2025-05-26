@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 services:
   rag-app:
     build: .
@@ -8,6 +8,11 @@ services:
     volumes:
       - ollama_models:/root/.ollama
       - ./chroma_db:/app/chroma_db
+    environment:
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-""}
+    # GPU config solo se aplica si está disponible
+    profiles:
+      - gpu
     deploy:
       resources:
         reservations:
@@ -15,6 +20,19 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
+  rag-app-cpu:
+    build: .
+    ports:
+      - "8000:8000"
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+      - ./chroma_db:/app/chroma_db
+    environment:
+      - CUDA_VISIBLE_DEVICES=""
+    profiles:
+      - cpu
 
 volumes:
   ollama_models:
