@@ -1,0 +1,22 @@
+# Respuestas profesionales para preguntas de Leyes
+respuestas_leyes = [
+    "Una ley es una norma jurídica de carácter general y obligatorio, emanada del poder legislativo competente siguiendo el procedimiento constitucional establecido. Tiene fuerza vinculante para todos los ciudadanos dentro de su ámbito territorial y temporal de aplicación. Se caracteriza por su generalidad, abstracción, obligatoriedad, y sanción en caso de incumplimiento, formando parte del ordenamiento jurídico del Estado.",
+    
+    "El derecho civil regula las relaciones jurídicas entre particulares en condiciones de igualdad, abarcando personas, familia, contratos, propiedad, obligaciones y responsabilidad civil. Su objetivo es la regulación de la vida privada. El derecho penal define delitos y establece penas para proteger bienes jurídicos fundamentales, caracterizándose por la intervención estatal punitiva, presunción de inocencia, y principios como legalidad y proporcionalidad.",
+    
+    "Un contrato es un acuerdo de voluntades entre dos o más partes que crea, modifica o extingue obligaciones jurídicas. Requiere elementos esenciales: consentimiento libre y consciente, objeto lícito y determinado, y causa lícita. Debe cumplir requisitos de validez como capacidad legal de las partes, ausencia de vicios del consentimiento, y forma cuando la ley lo exige. Genera derechos y obligaciones exigibles legalmente.",
+    
+    "La jurisprudencia es el conjunto de decisiones judiciales reiteradas y uniformes sobre casos similares, que interpretan y aplican el derecho. Constituye una fuente del derecho que complementa la ley, especialmente importante en sistemas de derecho anglosajón (precedente vinculante) y con valor interpretativo en sistemas de derecho continental. Proporciona seguridad jurídica y coherencia en la aplicación judicial.",
+    
+    "El derecho internacional es el conjunto de normas que regulan las relaciones entre Estados soberanos y otros sujetos de la comunidad internacional. Incluye tratados internacionales, costumbre internacional, principios generales del derecho, y decisiones judiciales internacionales. Abarca áreas como derechos humanos, derecho diplomático, derecho del mar, comercio internacional, y resolución pacífica de controversias entre naciones.",
+    
+    "La propiedad intelectual protege las creaciones del intelecto humano mediante derechos exclusivos temporales. Incluye derechos de autor (obras literarias, artísticas, científicas), propiedad industrial (patentes, marcas, diseños industriales), y derechos conexos. Busca equilibrar los intereses del creador incentivando la innovación con los intereses públicos de acceso al conocimiento, promoviendo el desarrollo cultural, tecnológico y económico.",
+    
+    "El derecho constitucional es la rama que estudia la organización fundamental del Estado, la distribución del poder público, los derechos fundamentales de los ciudadanos, y los principios básicos del ordenamiento jurídico. Analiza la constitución como norma suprema, el control de constitucionalidad, la jerarquía normativa, los procedimientos de reforma constitucional, y las garantías para la protección de derechos y libertades fundamentales.",
+    
+    "La teoría del derecho es la disciplina que estudia el derecho como fenómeno social, analizando conceptos jurídicos fundamentales, la naturaleza y estructura del sistema jurídico, las fuentes del derecho, y los métodos de interpretación jurídica. Examina problemas como la validez, eficacia y justicia de las normas, la relación entre derecho y moral, y los fundamentos filosóficos del ordenamiento jurídico.",
+    
+    "El derecho comparado es la disciplina que estudia sistemáticamente diferentes sistemas jurídicos para identificar similitudes, diferencias, y tendencias evolutivas. Analiza familias jurídicas (derecho continental, common law, derecho islámico, etc.), facilitando la comprensión de instituciones jurídicas extranjeras, la armonización legislativa internacional, y la mejora de los sistemas jurídicos nacionales mediante el intercambio de experiencias normativas.",
+    
+    "La filosofía del derecho examina los fundamentos conceptuales y valorativos del fenómeno jurídico, abordando preguntas sobre la naturaleza del derecho, la justicia, la validez normativa, y la relación entre derecho, moral y política. Incluye corrientes como iusnaturalismo (derecho natural), positivismo jurídico (derecho como hecho social), y realismo jurídico (derecho como práctica social efectiva)."
+]

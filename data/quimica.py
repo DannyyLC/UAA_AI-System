@@ -1,0 +1,22 @@
+# Respuestas profesionales para preguntas de Química
+respuestas_quimica = [
+    "Un átomo es la unidad básica de la materia, compuesto por un núcleo central que contiene protones (carga positiva) y neutrones (sin carga), rodeado por electrones (carga negativa) en orbitales. El número de protones define el elemento químico. Los átomos pueden formar iones al ganar o perder electrones, y se combinan para formar moléculas y compuestos mediante enlaces químicos.",
+    
+    "Un elemento es una sustancia pura formada por átomos con el mismo número atómico (mismo número de protones), como oxígeno (O) o carbono (C), y no puede descomponerse en sustancias más simples por métodos químicos. Un compuesto es una sustancia formada por la combinación química de dos o más elementos en proporciones definidas, como agua (H2O) o dióxido de carbono (CO2), y puede descomponerse en sus elementos constituyentes.",
+    
+    "La tabla periódica es la organización sistemática de todos los elementos químicos conocidos, ordenados por número atómico creciente y agrupados según sus propiedades químicas similares. Proporciona información sobre masa atómica, configuración electrónica, propiedades periódicas (radio atómico, electronegatividad, energía de ionización), tendencias químicas, y permite predecir comportamiento químico y formación de compuestos.",
+    
+    "Una reacción química es un proceso donde las sustancias reactantes se transforman en productos diferentes mediante ruptura y formación de enlaces químicos. Se caracteriza por cambios en composición química, conservación de masa y energía, y pueden clasificarse como síntesis, descomposición, intercambio simple o doble. Se representan mediante ecuaciones químicas balanceadas que muestran reactivos y productos.",
+    
+    "La estequiometría es la parte de la química que estudia las relaciones cuantitativas entre reactivos y productos en reacciones químicas basándose en la ley de conservación de masa. Permite calcular cantidades de sustancias necesarias o producidas, determinar rendimientos teóricos y reales, identificar reactivos limitantes, y establecer fórmulas empíricas y moleculares usando proporciones molares.",
+    
+    "Un enlace covalente se forma cuando dos átomos comparten uno o más pares de electrones para alcanzar estabilidad electrónica. Puede ser simple (un par), doble (dos pares) o triple (tres pares). Los electrones compartidos pertenecen a ambos átomos simultáneamente. Es común entre no metales y determina propiedades como geometría molecular, polaridad, y comportamiento químico de compuestos orgánicos e inorgánicos.",
+    
+    "La termodinámica química estudia los cambios de energía que acompañan las reacciones químicas y los procesos físicos. Se basa en las leyes de la termodinámica e incluye conceptos como entalpía (calor de reacción), entropía (desorden molecular), energía libre de Gibbs (espontaneidad), y equilibrio químico. Permite predecir la viabilidad y dirección de reacciones químicas.",
+    
+    "La cinética química estudia la velocidad de las reacciones químicas y los factores que la afectan: concentración de reactivos, temperatura, presión, presencia de catalizadores, y superficie de contacto. Analiza mecanismos de reacción, energía de activación, y establece leyes de velocidad. Es fundamental para optimizar procesos industriales y comprender procesos biológicos.",
+    
+    "La espectroscopia es el conjunto de técnicas analíticas que estudian la interacción entre radiación electromagnética y materia para identificar y cuantificar sustancias. Incluye UV-Vis (transiciones electrónicas), IR (vibraciones moleculares), RMN (resonancia magnética nuclear), y MS (espectrometría de masas). Se utiliza para determinación estructural, análisis cualitativo y cuantitativo, y control de calidad.",
+    
+    "La química cuántica aplica los principios de la mecánica cuántica para describir el comportamiento de electrones en átomos y moléculas. Estudia orbitales atómicos y moleculares, enlaces químicos, propiedades espectroscópicas, y reactividad química. Utiliza ecuaciones como la de Schrödinger para calcular energías, geometrías moleculares, y predecir propiedades químicas mediante métodos computacionales avanzados."
+]
