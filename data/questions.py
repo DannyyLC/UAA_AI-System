@@ -142,3 +142,4 @@ fisica = [
 
 questions = []
 questions = redes + ia + matematicas + quimica + leyes + finanzas + biologia + sistemas_operativos + medicina + fisica
+print(questions)

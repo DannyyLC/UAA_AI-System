@@ -5,6 +5,7 @@ from chromadb import PersistentClient
 from langchain_huggingface import HuggingFaceEmbeddings
 from src.shared.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 class Retrieval:
