@@ -40,6 +40,10 @@ RUN ARCH=$(uname -m) && \
 
 ENV PATH="/opt/conda/bin:$PATH"
 
+# Aceptar Términos de Servicio de los canales de Anaconda
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
 # Crear el entorno Python sin usar environment.yml
 RUN conda create -n rag-Agent python=3.10 -y
 
