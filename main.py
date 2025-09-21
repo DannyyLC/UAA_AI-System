@@ -154,7 +154,7 @@ async def main():
     # Construir el grafo
     print("Construyendo grafo...")
     graph = build_graph()
-    model_name = "gemma3"
+    model_name = "mistral:7b"
     judge_graph = crear_sistema_refinamiento(model_name=model_name)
 
     # Estado inicial
