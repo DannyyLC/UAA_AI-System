@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   rag-app:
     build: .
@@ -9,17 +10,12 @@ services:
       - ollama_models:/root/.ollama
       - ./chroma_db:/app/chroma_db
     environment:
-      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-""}
-    # GPU config solo se aplica si está disponible
+      - NVIDIA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      # ¡No pongas CUDA_VISIBLE_DEVICES=""!
+    gpus: "all"        # <- ESTA es la clave con Compose
     profiles:
       - gpu
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
 
   rag-app-cpu:
     build: .
@@ -30,7 +26,8 @@ services:
       - ollama_models:/root/.ollama
       - ./chroma_db:/app/chroma_db
     environment:
-      - CUDA_VISIBLE_DEVICES=""
+      - NVIDIA_VISIBLE_DEVICES=
+      - CUDA_VISIBLE_DEVICES=
     profiles:
       - cpu
 
