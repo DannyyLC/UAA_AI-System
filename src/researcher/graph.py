@@ -194,7 +194,8 @@ async def judge_node(state: State):
         contexto=contexto,
         prompt_adicional=prompt_adicional,
         judge_graph=state["judge_obj"],
-        max_iteraciones = 3
+        max_iteraciones = 3,
+        api=state["api"]
     )
     
     logger.info(f"Refinamiento completado: {resultado['iteraciones']} iteraciones, "

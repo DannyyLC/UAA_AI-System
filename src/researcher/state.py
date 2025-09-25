@@ -3,6 +3,7 @@ from langchain_core.messages import AnyMessage
 import operator
 from src.researcher.router import Router
 from src.researcher.retrieval import Retrieval
+from src.api.APIManager import APIManager
 
 class State(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
@@ -21,3 +22,4 @@ class State(TypedDict):
     retrieval_obj: Retrieval
     judge_obj: object
     response_model: str
+    api:APIManager

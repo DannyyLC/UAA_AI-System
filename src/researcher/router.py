@@ -17,6 +17,7 @@ class Router:
         try:
             available_subjects = self.retriever.get_existing_collections()
             prompt = ROUTER_PROMPT.format(materias=available_subjects, query=query)
+
             if state["api"].enabled:
                 category = state["api"].getResponse(prompt)
             else:
@@ -24,5 +25,5 @@ class Router:
             logger.info(f"Consulta clasificada como: {category.strip()}")
             return category.strip()
         except Exception as e:
-            logger.error("Error al clasificar la consulta")
+            logger.error(f"Error al clasificar la consulta: {str(e)}")
             return f"Error al clasificar la consulta: {str(e)}"  

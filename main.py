@@ -157,7 +157,7 @@ async def main():
     # Construir el grafo
     print("Construyendo grafo...")
     graph = build_graph()
-    model_name = "mistral:7b"
+    model_name = "gemma3:4b"
     judge_graph = crear_sistema_refinamiento(model_name=model_name)
 
     # Estado inicial
@@ -179,7 +179,7 @@ async def main():
         "router_obj" : Router(model_name),
         "judge_obj" : judge_graph,
         "response_model" : model_name,
-        "api":APIManager(USE_API)
+        "api":APIManager(USE_API, model_name)
     }
     
     state["router_obj"].retriever = state["retrieval_obj"]

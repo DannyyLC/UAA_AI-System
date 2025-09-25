@@ -13,7 +13,7 @@ class GeneradorRespuestas:
     def __call__(self, state: RefinerState) -> RefinerState:
         try:
             logger.info(f"Generando respuesta. Iteración {state['iteraciones']+1}/{state['max_iteraciones']}")
-            
+
             # En la primera iteración no hay respuesta anterior ni feedback
             respuesta_anterior = state.get("respuesta_actual", "")
             feedback = state.get("feedback", "")

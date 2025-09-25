@@ -46,6 +46,7 @@ async def generar_respuesta_refinada(
     contexto: str, 
     judge_graph,
     max_iteraciones,
+    api,
     prompt_adicional: str = ""
 ) -> Dict[str, Any]:
     """
@@ -74,7 +75,8 @@ async def generar_respuesta_refinada(
         max_iteraciones=max_iteraciones,
         resultado="mejorar",  # Comenzar con generación
         calidad_respuesta=0.0,  # Inicializar puntuación en 0
-        mejora_necesaria=True   # Inicialmente asumimos que necesitará mejoras
+        mejora_necesaria=True,   # Inicialmente asumimos que necesitará mejoras
+        api=api
     )
     
     # Ejecutar el flujo

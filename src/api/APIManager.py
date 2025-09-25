@@ -1,7 +1,8 @@
 class APIManager:
-    def __init__(self, enabled):
+    def __init__(self, enabled, model):
         self.enabled = enabled
-    
+        self.model = model
+
     def getResponse(self, query):
         modelMap = {
             "llama3.1:8b":"meta.llama3-1-8b-instruct-v1:0",
@@ -19,7 +20,8 @@ class APIManager:
                 model="gemma-3-4b-it",
                 contents=query,
             )
-            print(f"Respuesta de Google: {response}")
+
+            return response.candidates[0].content.parts[0].text
         else:
             import boto3
             from botocore.exceptions import ClientError
@@ -54,3 +56,7 @@ class APIManager:
             except (ClientError, Exception) as e:
                 print(f"ERROR: Can't invoke '{model_id}'. Reason: {e}")
                 exit(1)
+    
+    def __str__(self):
+        return f"Enabled: {self.enabled}\nModelo: {self.model}"
+

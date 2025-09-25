@@ -1,4 +1,5 @@
 from typing import TypedDict, Literal
+from src.api.APIManager import APIManager
 
 class RefinerState(TypedDict):
     contexto: str                  # Contexto original
@@ -10,3 +11,4 @@ class RefinerState(TypedDict):
     resultado: Literal["mejorar", "finalizar"]  # Decisión del juez
     calidad_respuesta: float       # Puntuación de calidad (0-10)
     mejora_necesaria: bool         # Indicador si la respuesta necesita mejoras
+    api:APIManager
