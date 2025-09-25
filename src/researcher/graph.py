@@ -73,7 +73,7 @@ async def investigation(state: State) -> State:
     # Generate research plan
     query = state["current_query"]
     model = state["response_model"]
-    plan = await generate_research_plan(query, model=model)
+    plan = await generate_research_plan(query, model=model, state=state)
 
     # Update state with research plan
     state["research_plan"] = plan

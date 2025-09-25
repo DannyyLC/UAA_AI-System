@@ -4,7 +4,7 @@ from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-async def generate_research_plan(prompt: str, model: str = "llama3.2:1b") -> list[str]:
+async def generate_research_plan(prompt: str, state, model: str = "llama3.2:1b") -> list[str]:
     """Genera un plan de investigación paso a paso basado en un prompt de usuario utilizando Ollama.
 
     Args:
@@ -18,22 +18,26 @@ async def generate_research_plan(prompt: str, model: str = "llama3.2:1b") -> lis
     try:
         # Prompt de sistema para estructurar la respuesta en pasos concretos
         system_prompt = INVESTIGATION_PROMPT.format(prompt=prompt)
+        useAPI = state["api"].enabled
 
-        # Hacer la solicitud a la API de Ollama
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "http://localhost:11434/api/generate",  # URL del servidor Ollama
-                json={"model": model, "prompt": system_prompt, "stream": False},
-                timeout=60
-            )
+        if useAPI:
+            content = state["api"].getResponse(system_prompt)
+        else:
+            # Hacer la solicitud a la API de Ollama
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "http://localhost:11434/api/generate",  # URL del servidor Ollama
+                    json={"model": model, "prompt": system_prompt, "stream": False},
+                    timeout=60
+                )
 
-        # Verificar si la respuesta es válida
-        if response.status_code != 200:
-            logger.error(f"Error en la respuesta de Ollama: {response.text}")
-            return ["Error al generar el plan. Verifique que Ollama esté en ejecución."]
+            # Verificar si la respuesta es válida
+            if response.status_code != 200:
+                logger.error(f"Error en la respuesta de Ollama: {response.text}")
+                return ["Error al generar el plan. Verifique que Ollama esté en ejecución."]
 
-        # Extraer el contenido de la respuesta
-        content = response.json().get("response", "")
+            # Extraer el contenido de la respuesta
+            content = response.json().get("response", "")
         if not content:
             return ["No se pudo generar un plan de investigación válido."]
 
