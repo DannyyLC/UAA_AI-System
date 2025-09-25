@@ -29,7 +29,10 @@ class GeneradorRespuestas:
             )
             
             # Invocar el modelo
-            nueva_respuesta = self.llm.invoke(prompt)
+            if state["api"].enabled:
+                nueva_respuesta = state["api"].getResponse(prompt)
+            else:
+                nueva_respuesta = self.llm.invoke(prompt)
             # Actualizar el estado
             state["respuesta_actual"] = nueva_respuesta
             state["iteraciones"] += 1

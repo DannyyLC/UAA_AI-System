@@ -9,8 +9,10 @@ from src.researcher.graph import build_graph
 from src.researcher.router import Router
 from src.researcher.retrieval import Retrieval
 from src.researcher.judge_graph import crear_sistema_refinamiento
+from src.api.APIManager import APIManager
 
 logger = get_logger(__name__)
+USE_API = True
 
 async def run_graph_with_query(query: str, graph, state) -> Dict[str, Any]:
     """
@@ -119,7 +121,8 @@ async def process_query_multiple_models(query):
             "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
             "router_obj" : Router(model_name=model),
             "judge_obj" : judge_graph,
-            "response_model" : model
+            "response_model" : model,
+            "api":APIManager(USE_API)
         }
 
         state["router_obj"].retriever = state["retrieval_obj"]
@@ -175,7 +178,8 @@ async def main():
         "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
         "router_obj" : Router(model_name),
         "judge_obj" : judge_graph,
-        "response_model" : model_name
+        "response_model" : model_name,
+        "api":APIManager(USE_API)
     }
     
     state["router_obj"].retriever = state["retrieval_obj"]

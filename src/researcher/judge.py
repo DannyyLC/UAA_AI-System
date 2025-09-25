@@ -25,7 +25,10 @@ class Judge:
             )
             
             # Invocar el modelo
-            evaluacion = self.llm.invoke(prompt)
+            if state["api"].enabled:
+                evaluacion = state["api"].getResponse(prompt)
+            else:
+                evaluacion = self.llm.invoke(prompt)
             
             # Parsear la respuesta del juez
             lines = evaluacion.strip().split("\n")

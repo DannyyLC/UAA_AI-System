@@ -46,7 +46,10 @@ def response(state: State) -> State:
     llm = get_llm(model_name=model, temperature=0.1)  
     
     try:
-        response_text = llm.invoke(last_message)
+        if state["api"].enabled:
+            response_text = state["api"].getResponse(last_message)
+        else:
+            response_text = llm.invoke(last_message)
         ai_response = AIMessage(content=response_text)
         return {
             **state,
@@ -109,7 +112,7 @@ def router(state: State) -> State:
 
     # Classify the query using the Router
     query = state["current_query"]
-    category = router.classify_with_llm(query)
+    category = router.classify_with_llm(query, state)
 
     category = category.replace('"', "")
     category = category.replace("'", "")

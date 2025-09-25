@@ -12,12 +12,15 @@ class Router:
         self.available_subjects = "programacion, estructura_de_datos, unix, ecuaciones_diferenciales"
         self.retriever = None
         
-    def classify_with_llm(self, query: str) -> str:
+    def classify_with_llm(self, query: str, state) -> str:
         """Clasifica la consulta usando el modelo de lenguaje con el prompt de clasificación."""
         try:
             available_subjects = self.retriever.get_existing_collections()
             prompt = ROUTER_PROMPT.format(materias=available_subjects, query=query)
-            category = self.llm.invoke(prompt)
+            if state["api"].enabled:
+                category = state["api"].getResponse(prompt)
+            else:
+                category = self.llm.invoke(prompt)
             logger.info(f"Consulta clasificada como: {category.strip()}")
             return category.strip()
         except Exception as e:
