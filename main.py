@@ -153,7 +153,7 @@ async def process_query_multiple_models(query):
 async def main():
     """Función principal que muestra el menú y maneja las opciones."""
     # Instancias
-    embedding_processor = EmbeddingProcessor(persist_directory="./chroma_db")
+    embedding_processor = EmbeddingProcessor(True, persist_directory="./chroma_db")
     # Construir el grafo
     print("Construyendo grafo...")
     graph = build_graph()

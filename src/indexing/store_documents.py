@@ -12,12 +12,15 @@ try:
 except Exception:
     OpenAIEmbeddings = None  # type: ignore
 
+from dotenv import load_dotenv
+load_dotenv()
+
 logger = get_logger(__name__)
 
 class EmbeddingProcessor:
     """Procesa documentos y almacena sus embeddings en Chroma."""
     
-    def __init__(self, api, persist_directory: str = "./chroma_db"):
+    def __init__(self, api: bool, persist_directory: str = "./chroma_db"):
         """
         Inicializa el procesador de embeddings.
         
@@ -33,12 +36,13 @@ class EmbeddingProcessor:
         model_kwargs = {'device': device}
         encode_kwargs = {'normalize_embeddings': True}
         if api:
+            print("Se detecta que se quiere usar api para embedings")
             if OpenAIEmbeddings is None:
                 raise ImportError("langchain-openai no está instalado. pip install langchain-openai")
             if not os.getenv("OPENAI_API_KEY"):
                 raise EnvironmentError("Falta OPENAI_API_KEY en el entorno para usar backend 'openai'.")
             # Defaults sensatos
-            model = "text-embedding-3-large"
+            model = "text-embedding-3-small"
             
             self.embeddings = OpenAIEmbeddings(
                 model=model,
