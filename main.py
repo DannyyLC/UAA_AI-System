@@ -1,109 +1,130 @@
+# app.py
 import asyncio
 import os
 from io import BytesIO
+from typing import Dict, Any, List, Optional
+
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# ====== Imports de tu proyecto ======
 from src.indexing import EmbeddingProcessor
 from src.shared.logging_utils import get_logger
-from typing import Dict, Any
 from langchain_core.messages import HumanMessage
-from src.researcher.graph import build_graph  
+from src.researcher.graph import build_graph
 from src.researcher.router import Router
 from src.researcher.retrieval import Retrieval
 from src.researcher.judge_graph import crear_sistema_refinamiento
 from src.api.APIManager import APIManager
 
+# ====== Configuración base ======
 logger = get_logger(__name__)
 USE_API = True
 
-async def run_graph_with_query(query: str, graph, state) -> Dict[str, Any]:
+app = FastAPI(title="RAG_UAA", version="1.0.0")
+
+# CORS (ajusta origins en producción)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # cámbialo a ["https://tu-dominio.com"] en prod
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True,
+)
+
+# ====== Modelos I/O de la API ======
+class QueryIn(BaseModel):
+    query: str
+    answer:str
+
+class QueryOut(BaseModel):
+    results: Dict[str, Any]
+
+# (Opcional) Respuesta del endpoint de indexación
+class IndexOut(BaseModel):
+    status: str
+    collection: str
+    filename: str
+    user_id: str
+
+# ====== Helpers reutilizables ======
+async def run_graph_with_query(graph, state) -> Dict[str, Any]:
     """
-    Ejecuta el grafo de investigación con una consulta específica.
-    
-    Args:
-        query (str): La consulta del usuario.
-        
-    Returns:
-        Dict[str, Any]: El estado final tras ejecutar el grafo.
+    Ejecuta el grafo con el estado dado y devuelve el estado final.
     """
     try:
-        
-        # Ejecutar el grafo
-        print(f"Iniciando grafo con consulta: {query}")
         result = await graph.ainvoke(state)
-        
         return result
     except Exception as e:
         logger.error(f"Error en run_graph_with_query: {str(e)}")
         raise
 
 async def process_query(graph, state):
-    """Maneja la opción de consulta al sistema."""
+    """
+    Versión interactiva por consola (con input()).
+    NO se usa en la API, se conserva para referencia.
+    """
     print("\n=== Modo de Consulta ===")
     query = input("Ingresa tu pregunta: ")
-    
+
     try:
-        # Agregar el mensaje de usuario al historial
         state["messages"].append(HumanMessage(content=query))
         state["current_query"] = query
-        
-        # Ejecutar el grafo con la consulta
-        final_state = await run_graph_with_query(query, graph, state)
-        
+
+        final_state = await run_graph_with_query(graph, state)
         state.update(final_state)
-        
-        # Mostrar respuesta
+
         print("\n=== Respuesta ===")
         if state["messages"] and len(state["messages"]) > 1:
             ai_response = state["messages"][-1]
             print(ai_response.content)
-            
-            # Si hay metadatos disponibles, mostrarlos
+
             if hasattr(ai_response, "additional_kwargs") and ai_response.additional_kwargs:
                 print("\n=== Metadatos ===")
                 for key, value in ai_response.additional_kwargs.items():
                     print(f"{key}: {value}")
         else:
             print("No se obtuvo una respuesta.")
-        
     except Exception as e:
         logger.error(f"Error al procesar la consulta: {str(e)}")
         print(f"Error: {str(e)}")
 
 async def index_documents(embedding_processor: EmbeddingProcessor):
-    """Maneja la opción de indexación de documentos."""
+    """
+    Indexación por consola (con input()).
+    NO se usa en la API, se conserva para referencia.
+    """
     pdf_path = input("Dame el nombre del archivo: ")
     collection = input("Dame el nombre de la coleccion: ")
 
-    # Leer el archivo PDF
     with open(pdf_path, 'rb') as pdf_file:
         pdf_content = pdf_file.read()
-    
-    # Crear el BytesIO con el contenido del PDF
+
     pdf_bytes = BytesIO(pdf_content)
-    
-    # Obtener el nombre del archivo del path
     pdf_name = os.path.basename(pdf_path)
-    
-    # Crear la lista de documentos
     documents = [(pdf_bytes, pdf_name)]
-    
-    # Procesar y almacenar embeddings
+
     collection_name = await embedding_processor.process_and_store(
         documents=documents,
         user_id="usuario_123",
         collection_name=collection
     )
-    
+
     print(f"Embeddings almacenados en la colección: {collection_name}")
-    
-async def process_query_multiple_models(query):
-    models = ["gemma3", "mistral"]
+
+async def process_query_multiple_models(query: str) -> Dict[str, Any]:
+    """
+    Ejecuta la consulta en múltiples modelos y devuelve {modelo: respuesta}.
+    """
+    models = ["gemma3:4b"]
+    response: Dict[str, Any] = {}
 
     for model in models:
         logger.info(f"\n============= RESPUESTA {model.upper()} =============")
-        # Construir el grafo
+
         graph = build_graph()
-        model_name = model
-        judge_graph = crear_sistema_refinamiento(model_name=model_name)
+        judge_graph = crear_sistema_refinamiento(model_name=model)
 
         state = {
             "messages": [],
@@ -118,11 +139,11 @@ async def process_query_multiple_models(query):
             "retrieval_results": {},
             "context_for_generation": "",
             "research_completed": False,
-            "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
-            "router_obj" : Router(model_name=model),
-            "judge_obj" : judge_graph,
-            "response_model" : model,
-            "api":APIManager(USE_API)
+            "retrieval_obj": Retrieval(persist_directory="./chroma_db"),
+            "router_obj": Router(model_name=model),
+            "judge_obj": judge_graph,
+            "response_model": model,
+            "api": APIManager(USE_API, model)
         }
 
         state["router_obj"].retriever = state["retrieval_obj"]
@@ -131,36 +152,120 @@ async def process_query_multiple_models(query):
         state["messages"].append(HumanMessage(content=query))
         state["current_query"] = query
 
-        final_state = await run_graph_with_query(query, graph, state)
-        
+        final_state = await run_graph_with_query(graph, state)
         state.update(final_state)
-        
-        # Mostrar respuesta
-        print("\n=== Respuesta ===")
-        if state["messages"] and len(state["messages"]) > 1:
-            ai_response = state["messages"][-1]
-            print(ai_response.content)
-            
-            # Si hay metadatos disponibles, mostrarlos
-            if hasattr(ai_response, "additional_kwargs") and ai_response.additional_kwargs:
-                print("\n=== Metadatos ===")
-                for key, value in ai_response.additional_kwargs.items():
-                    print(f"{key}: {value}")
+
+        # Extraer la última respuesta del historial
+        msgs = final_state.get("messages") or state.get("messages") or []
+        if msgs:
+            last = msgs[-1]
+            content = getattr(last, "content", None)
+            response[model] = content if content is not None else ""
         else:
-            print("No se obtuvo una respuesta.")
+            response[model] = ""
 
+    return response
 
+# ====== Endpoints de la API ======
+@app.get("/health", tags=["system"])
+def health():
+    return {"status": "ok"}
+
+@app.post("/query", response_model=QueryOut, tags=["query"])
+async def query_endpoint(payload: QueryIn):
+    """
+    Body:
+    {
+      "query": "tu pregunta"
+      // "models": ["gemma3","mistral"]  # opcional (tu lógica interna usa gemma3:4b)
+    }
+    """
+    q = (payload.query or "").strip()
+    answer = (payload.answer or "").strip()
+    if not q:
+        raise HTTPException(status_code=400, detail="Falta 'query'.")
+
+    try:
+        results = await process_query_multiple_models(q)
+        return {"results": results}
+    except Exception as e:
+        logger.error(f"Error en /query: {e}")
+        raise HTTPException(status_code=500, detail="Error procesando la consulta")
+
+@app.post("/index", response_model=IndexOut, tags=["documents"])
+async def index_endpoint(
+    file: UploadFile = File(...),
+    collection: str = Form(...),
+    user_id: str = Form("usuario_123"),
+):
+    """
+    Recibe un archivo y lo indexa con EmbeddingProcessor.process_and_store.
+    - file: documento (PDF, DOCX, MD, etc.)
+    - collection: nombre de la colección a crear/usar en Chroma
+    - user_id: agregado a la metadata de chunks
+    """
+    try:
+        # Leer archivo subido
+        contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail="El archivo está vacío.")
+
+        file_bytes = BytesIO(contents)
+
+        # Usamos el EmbeddingProcessor inicializado en startup
+        if not hasattr(app.state, "embedding_processor"):
+            # Fallback por si startup no corrió (no debería suceder)
+            logger.warning("embedding_processor no inicializado en app.state; creando uno temporal.")
+            embedding_processor = EmbeddingProcessor(True, persist_directory="./chroma_db")
+        else:
+            embedding_processor = app.state.embedding_processor
+
+        # Procesar e indexar
+        collection_name = await embedding_processor.process_and_store(
+            documents=[(file_bytes, file.filename)],
+            user_id=user_id,
+            collection_name=collection
+        )
+
+        return IndexOut(
+            status="ok",
+            collection=collection_name,
+            filename=file.filename,
+            user_id=user_id,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en /index: {e}")
+        raise HTTPException(status_code=500, detail="Error indexando el documento")
+
+# ====== Inicialización de recursos pesados ======
+@app.on_event("startup")
+async def on_startup():
+    """
+    Inicializa el EmbeddingProcessor una sola vez para reutilizarlo.
+    Evita descargar/cargar modelos en cada request.
+    """
+    try:
+        app.state.embedding_processor = EmbeddingProcessor(
+            True,  # usa API si tu EmbeddingProcessor lo interpreta así
+            persist_directory="./chroma_db"
+        )
+        logger.info("EmbeddingProcessor inicializado en startup.")
+    except Exception as e:
+        logger.error(f"Fallo inicializando EmbeddingProcessor: {e}")
+        # No hacemos raise para permitir levantar el servidor; /index hará fallback.
+
+# ====== Bloque CLI original (comentado para conservarlo) ======
+"""
 async def main():
-    """Función principal que muestra el menú y maneja las opciones."""
-    # Instancias
     embedding_processor = EmbeddingProcessor(True, persist_directory="./chroma_db")
-    # Construir el grafo
+
     print("Construyendo grafo...")
     graph = build_graph()
     model_name = "gemma3:4b"
     judge_graph = crear_sistema_refinamiento(model_name=model_name)
 
-    # Estado inicial
     print("Creando estado inicial...")
     state = {
         "messages": [],
@@ -175,13 +280,12 @@ async def main():
         "retrieval_results": {},
         "context_for_generation": "",
         "research_completed": False,
-        "retrieval_obj" : Retrieval(persist_directory="./chroma_db"),
-        "router_obj" : Router(model_name),
-        "judge_obj" : judge_graph,
-        "response_model" : model_name,
-        "api":APIManager(USE_API, model_name)
+        "retrieval_obj": Retrieval(persist_directory="./chroma_db"),
+        "router_obj": Router(model_name),
+        "judge_obj": judge_graph,
+        "response_model": model_name,
+        "api": APIManager(USE_API, model_name)
     }
-    
     state["router_obj"].retriever = state["retrieval_obj"]
 
     while True:
@@ -189,9 +293,9 @@ async def main():
         print("1. Indexar documentos")
         print("2. Realizar consulta")
         print("3. Salir")
-        
+
         choice = input("Selecciona una opción (1-3): ")
-        
+
         if choice == "1":
             await index_documents(embedding_processor)
         elif choice == "2":
@@ -218,5 +322,5 @@ async def main():
             print("Opción no válida. Por favor, intenta de nuevo.")
 
 if __name__ == "__main__":
-    # Ejecutar el bucle principal de forma asíncrona
     asyncio.run(main())
+"""
