@@ -1,4 +1,5 @@
 from typing import List, Optional, BinaryIO
+import os
 import torch
 import uuid
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -6,13 +7,17 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from src.indexing.docuement_loader import DocumentProcessor
 from src.shared.logging_utils import get_logger, timing_decorator
+try:
+    from langchain_openai import OpenAIEmbeddings
+except Exception:
+    OpenAIEmbeddings = None  # type: ignore
 
 logger = get_logger(__name__)
 
 class EmbeddingProcessor:
     """Procesa documentos y almacena sus embeddings en Chroma."""
     
-    def __init__(self, persist_directory: str = "./chroma_db"):
+    def __init__(self, api, persist_directory: str = "./chroma_db"):
         """
         Inicializa el procesador de embeddings.
         
@@ -27,12 +32,25 @@ class EmbeddingProcessor:
         model_name = "BAAI/bge-large-en-v1.5"
         model_kwargs = {'device': device}
         encode_kwargs = {'normalize_embeddings': True}
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=model_name,
-            model_kwargs=model_kwargs,
-            encode_kwargs=encode_kwargs
-        )
+        if api:
+            if OpenAIEmbeddings is None:
+                raise ImportError("langchain-openai no está instalado. pip install langchain-openai")
+            if not os.getenv("OPENAI_API_KEY"):
+                raise EnvironmentError("Falta OPENAI_API_KEY en el entorno para usar backend 'openai'.")
+            # Defaults sensatos
+            model = "text-embedding-3-large"
+            
+            self.embeddings = OpenAIEmbeddings(
+                model=model,
+            )
+        else:
+            self.embeddings = HuggingFaceEmbeddings(
+                model_name=model_name,
+                model_kwargs=model_kwargs,
+                encode_kwargs=encode_kwargs
+            )
         
+
         self.processor = DocumentProcessor()
         
         # Configurar el divisor de texto
