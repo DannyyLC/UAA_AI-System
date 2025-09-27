@@ -5,6 +5,8 @@ from io import BytesIO
 from typing import Dict, Any, List, Optional
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from pathlib import Path
+import shutil
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -23,6 +25,9 @@ logger = get_logger(__name__)
 USE_API = True
 
 app = FastAPI(title="RAG_UAA", version="1.0.0")
+# Ruta absoluta a ./chroma_db junto al archivo actual
+BASE_DIR = Path(__file__).resolve().parent
+CHROMA_DIR = BASE_DIR / "chroma_db"
 
 # CORS (ajusta origins en producción)
 app.add_middleware(
@@ -191,6 +196,47 @@ async def query_endpoint(payload: QueryIn):
     except Exception as e:
         logger.error(f"Error en /query: {e}")
         raise HTTPException(status_code=500, detail="Error procesando la consulta")
+
+@app.post("/reiniciar")
+def reiniciar_chroma():
+    """
+    Elimina todo el contenido de ./chroma_db y recrea el directorio vacío.
+    Retorna la cantidad de entradas eliminadas.
+    """
+    try:
+        # Asegurar que el path apunte a un directorio llamado exactamente "chroma_db"
+        if CHROMA_DIR.name != "chroma_db":
+            raise HTTPException(status_code=400, detail="Ruta no segura detectada.")
+
+        deleted = 0
+        if CHROMA_DIR.exists():
+            if not CHROMA_DIR.is_dir():
+                raise HTTPException(status_code=400, detail=f"{CHROMA_DIR} no es un directorio.")
+
+            # Contar entradas (archivos/carpetas) antes de borrar (opcional)
+            try:
+                deleted = sum(1 for _ in CHROMA_DIR.rglob("*"))
+            except Exception:
+                # Si falla el conteo, seguimos con el borrado
+                deleted = None
+
+            # Borrar todo el directorio y su contenido
+            shutil.rmtree(CHROMA_DIR)
+
+        # Recrear el directorio vacío
+        CHROMA_DIR.mkdir(parents=True, exist_ok=True)
+
+        return {
+            "status": "ok",
+            "mensaje": "chroma_db reiniciada",
+            "path": str(CHROMA_DIR),
+            "eliminados": deleted
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo reiniciar chroma_db: {e}")
 
 @app.post("/index", response_model=IndexOut, tags=["documents"])
 async def index_endpoint(
