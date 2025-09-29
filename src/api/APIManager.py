@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 class APIManager:
     def __init__(self, enabled, model):
         self.enabled = enabled
@@ -46,12 +49,13 @@ class APIManager:
                 response = client.converse(
                     modelId=model_id,
                     messages=conversation,
-                    inferenceConfig={"maxTokens": 512, "temperature": 0.5, "topP": 0.9},
+                    inferenceConfig={"maxTokens": 8100, "temperature": 0.1, "topP": 0.9},
                 )
 
                 # Extract and print the response text.
                 response_text = response["output"]["message"]["content"][0]["text"]
-                print(response_text)
+                print(f"Respuesta dle modelo: {response_text}")
+                return response_text
 
             except (ClientError, Exception) as e:
                 print(f"ERROR: Can't invoke '{model_id}'. Reason: {e}")

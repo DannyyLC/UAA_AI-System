@@ -19,6 +19,9 @@ from src.researcher.router import Router
 from src.researcher.retrieval import Retrieval
 from src.researcher.judge_graph import crear_sistema_refinamiento
 from src.api.APIManager import APIManager
+from chromadb import PersistentClient
+from chromadb.config import Settings
+
 
 # ====== Configuración base ======
 logger = get_logger(__name__)
@@ -122,7 +125,7 @@ async def process_query_multiple_models(query: str) -> Dict[str, Any]:
     """
     Ejecuta la consulta en múltiples modelos y devuelve {modelo: respuesta}.
     """
-    models = ["gemma3:4b"]
+    models = ["gemma3:4b", "mistral:7b", "llama3.1:8b"]
     response: Dict[str, Any] = {}
 
     for model in models:
@@ -199,42 +202,72 @@ async def query_endpoint(payload: QueryIn):
 
 @app.post("/reiniciar")
 def reiniciar_chroma():
-    """
-    Elimina todo el contenido de ./chroma_db y recrea el directorio vacío.
-    Retorna la cantidad de entradas eliminadas.
-    """
     try:
-        # Asegurar que el path apunte a un directorio llamado exactamente "chroma_db"
-        if CHROMA_DIR.name != "chroma_db":
-            raise HTTPException(status_code=400, detail="Ruta no segura detectada.")
+        import os, shutil
+        from uuid import UUID
+        from chromadb import PersistentClient
 
-        deleted = 0
-        if CHROMA_DIR.exists():
-            if not CHROMA_DIR.is_dir():
-                raise HTTPException(status_code=400, detail=f"{CHROMA_DIR} no es un directorio.")
+        # 0) Soltar referencias vivas para evitar locks
+        app.state.embedding_processor = None
 
-            # Contar entradas (archivos/carpetas) antes de borrar (opcional)
-            try:
-                deleted = sum(1 for _ in CHROMA_DIR.rglob("*"))
-            except Exception:
-                # Si falla el conteo, seguimos con el borrado
-                deleted = None
+        # 1) Borrado lógico de TODAS las colecciones (sin allow_reset)
+        client = PersistentClient(path=str(CHROMA_DIR))  # usa la misma ruta absoluta de siempre
+        for col in client.list_collections():
+            client.delete_collection(col.name)
 
-            # Borrar todo el directorio y su contenido
-            shutil.rmtree(CHROMA_DIR)
+        # 2) Limpieza de carpetas UUID huérfanas dentro de CHROMA_DIR
+        #    (solo borra directorios cuyo nombre es UUID y que no correspondan a colecciones vivas)
+        live_ids = set()
+        # después de borrar deberían quedar 0, pero por si acaso:
+        for c in client.list_collections():
+            # algunos bindings exponen .id; si no, get_collection para obtenerlo
+            cid = getattr(c, "id", None)
+            if not cid:
+                cid = client.get_collection(c.name).id
+            live_ids.add(str(cid))
 
-        # Recrear el directorio vacío
-        CHROMA_DIR.mkdir(parents=True, exist_ok=True)
+        for entry in CHROMA_DIR.iterdir():
+            if entry.is_dir():
+                # verificar si el nombre del directorio "parece" un UUID
+                is_uuid = False
+                try:
+                    UUID(entry.name)
+                    is_uuid = True
+                except Exception:
+                    pass
+
+                # si es UUID y no está en la lista de colecciones vivas => borrar
+                if is_uuid and (entry.name not in live_ids):
+                    shutil.rmtree(entry, ignore_errors=True)
+
+        # 3) (Opcional) limpiar archivos WAL/SHM si no hay conexiones abiertas
+        for fname in ("chroma.sqlite3-wal", "chroma.sqlite3-shm"):
+            p = CHROMA_DIR / fname
+            if p.exists():
+                try:
+                    p.unlink()
+                except Exception:
+                    # si hay lock, lo dejamos pasar
+                    pass
+
+        # 4) Permisos del directorio para evitar "read-only" por usuario/FS
+        try:
+            os.chmod(CHROMA_DIR, 0o777)  # ajusta a 775 si prefieres
+        except Exception:
+            pass
+
+        # 5) Re-inicializar el EmbeddingProcessor apuntando a la RUTA ABSOLUTA
+        app.state.embedding_processor = EmbeddingProcessor(
+            api=USE_API,
+            persist_directory=str(CHROMA_DIR)
+        )
 
         return {
             "status": "ok",
-            "mensaje": "chroma_db reiniciada",
+            "mensaje": "Colecciones eliminadas y disco saneado",
             "path": str(CHROMA_DIR),
-            "eliminados": deleted
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"No se pudo reiniciar chroma_db: {e}")
 
@@ -294,7 +327,7 @@ async def on_startup():
     """
     try:
         app.state.embedding_processor = EmbeddingProcessor(
-            True,  # usa API si tu EmbeddingProcessor lo interpreta así
+            USE_API,  # usa API si tu EmbeddingProcessor lo interpreta así
             persist_directory="./chroma_db"
         )
         logger.info("EmbeddingProcessor inicializado en startup.")

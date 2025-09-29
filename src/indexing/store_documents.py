@@ -10,7 +10,7 @@ from src.shared.logging_utils import get_logger, timing_decorator
 try:
     from langchain_openai import OpenAIEmbeddings
 except Exception:
-    OpenAIEmbeddings = None  # type: ignore
+    OpenAIEmbeddings = None
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -36,7 +36,6 @@ class EmbeddingProcessor:
         model_kwargs = {'device': device}
         encode_kwargs = {'normalize_embeddings': True}
         if api:
-            print("Se detecta que se quiere usar api para embedings")
             if OpenAIEmbeddings is None:
                 raise ImportError("langchain-openai no está instalado. pip install langchain-openai")
             if not os.getenv("OPENAI_API_KEY"):
