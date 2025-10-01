@@ -1,12 +1,13 @@
 # app.py
 import asyncio
 import os
+import sqlite3
 from io import BytesIO
 from typing import Dict, Any, List, Optional
-
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pathlib import Path
 import shutil
+
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -31,6 +32,7 @@ app = FastAPI(title="RAG_UAA", version="1.0.0")
 # Ruta absoluta a ./chroma_db junto al archivo actual
 BASE_DIR = Path(__file__).resolve().parent
 CHROMA_DIR = BASE_DIR / "chroma_db"
+DB_PATH = BASE_DIR / "query_results.db"
 
 # CORS (ajusta origins en producción)
 app.add_middleware(
@@ -44,7 +46,8 @@ app.add_middleware(
 # ====== Modelos I/O de la API ======
 class QueryIn(BaseModel):
     query: str
-    answer:str
+    answer: str
+    especialidad: str
 
 class QueryOut(BaseModel):
     results: Dict[str, Any]
@@ -55,6 +58,43 @@ class IndexOut(BaseModel):
     collection: str
     filename: str
     user_id: str
+
+# ====== Funciones de base de datos ======
+def init_database():
+    """Inicializa la base de datos SQLite y crea la tabla si no existe."""
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS query_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pregunta TEXT NOT NULL,
+            respuesta TEXT NOT NULL,
+            especialidad TEXT NOT NULL,
+            gemma TEXT,
+            mistral TEXT,
+            llama TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def save_query_result(pregunta: str, respuesta: str, especialidad: str, results: Dict[str, Any]):
+    """Guarda el resultado de una consulta en la base de datos."""
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    
+    gemma = results.get("gemma3:4b", "")
+    mistral = results.get("mistral:7b", "")
+    llama = results.get("llama3.1:8b", "")
+    
+    cursor.execute("""
+        INSERT INTO query_results (pregunta, respuesta, especialidad, gemma, mistral, llama)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (pregunta, respuesta, especialidad, gemma, mistral, llama))
+    
+    conn.commit()
+    conn.close()
 
 # ====== Helpers reutilizables ======
 async def run_graph_with_query(graph, state) -> Dict[str, Any]:
@@ -185,16 +225,23 @@ async def query_endpoint(payload: QueryIn):
     Body:
     {
       "query": "tu pregunta"
-      // "models": ["gemma3","mistral"]  # opcional (tu lógica interna usa gemma3:4b)
+      "answer": "respuesta esperada"
+      "especialidad": "especialidad"
     }
     """
     q = (payload.query or "").strip()
     answer = (payload.answer or "").strip()
+    especialidad = (payload.especialidad or "").strip()
+
     if not q:
         raise HTTPException(status_code=400, detail="Falta 'query'.")
 
     try:
         results = await process_query_multiple_models(q)
+        
+        # Guardar en la base de datos
+        save_query_result(q, answer, especialidad, results)
+        
         return {"results": results}
     except Exception as e:
         logger.error(f"Error en /query: {e}")
@@ -324,6 +371,7 @@ async def on_startup():
     """
     Inicializa el EmbeddingProcessor una sola vez para reutilizarlo.
     Evita descargar/cargar modelos en cada request.
+    También inicializa la base de datos SQLite.
     """
     try:
         app.state.embedding_processor = EmbeddingProcessor(
@@ -331,8 +379,12 @@ async def on_startup():
             persist_directory="./chroma_db"
         )
         logger.info("EmbeddingProcessor inicializado en startup.")
+        
+        # Inicializar base de datos
+        init_database()
+        logger.info("Base de datos SQLite inicializada en startup.")
     except Exception as e:
-        logger.error(f"Fallo inicializando EmbeddingProcessor: {e}")
+        logger.error(f"Fallo inicializando recursos: {e}")
         # No hacemos raise para permitir levantar el servidor; /index hará fallback.
 
 # ====== Bloque CLI original (comentado para conservarlo) ======
