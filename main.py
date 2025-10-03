@@ -2,6 +2,7 @@
 import asyncio
 import os
 import sqlite3
+import time
 from io import BytesIO
 from typing import Dict, Any, List, Optional
 from pathlib import Path
@@ -73,13 +74,16 @@ def init_database():
             gemma TEXT,
             mistral TEXT,
             llama TEXT,
+            gemma_time REAL,
+            mistral_time REAL,
+            llama_time REAL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     conn.commit()
     conn.close()
 
-def save_query_result(pregunta: str, respuesta: str, especialidad: str, results: Dict[str, Any]):
+def save_query_result(pregunta: str, respuesta: str, especialidad: str, results: Dict[str, Any], times: Dict[str, float]):
     """Guarda el resultado de una consulta en la base de datos."""
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.cursor()
@@ -88,10 +92,14 @@ def save_query_result(pregunta: str, respuesta: str, especialidad: str, results:
     mistral = results.get("mistral:7b", "")
     llama = results.get("llama3.1:8b", "")
     
+    gemma_time = times.get("gemma3:4b", 0.0)
+    mistral_time = times.get("mistral:7b", 0.0)
+    llama_time = times.get("llama3.1:8b", 0.0)
+    
     cursor.execute("""
-        INSERT INTO query_results (pregunta, respuesta, especialidad, gemma, mistral, llama)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (pregunta, respuesta, especialidad, gemma, mistral, llama))
+        INSERT INTO query_results (pregunta, respuesta, especialidad, gemma, mistral, llama, gemma_time, mistral_time, llama_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (pregunta, respuesta, especialidad, gemma, mistral, llama, gemma_time, mistral_time, llama_time))
     
     conn.commit()
     conn.close()
@@ -161,15 +169,19 @@ async def index_documents(embedding_processor: EmbeddingProcessor):
 
     print(f"Embeddings almacenados en la colección: {collection_name}")
 
-async def process_query_multiple_models(query: str) -> Dict[str, Any]:
+async def process_query_multiple_models(query: str) -> tuple[Dict[str, Any], Dict[str, float]]:
     """
-    Ejecuta la consulta en múltiples modelos y devuelve {modelo: respuesta}.
+    Ejecuta la consulta en múltiples modelos y devuelve {modelo: respuesta} y {modelo: tiempo}.
     """
     models = ["gemma3:4b", "mistral:7b", "llama3.1:8b"]
     response: Dict[str, Any] = {}
+    execution_times: Dict[str, float] = {}
 
     for model in models:
         logger.info(f"\n============= RESPUESTA {model.upper()} =============")
+        
+        # Iniciar temporizador
+        start_time = time.time()
 
         graph = build_graph()
         judge_graph = crear_sistema_refinamiento(model_name=model)
@@ -203,6 +215,11 @@ async def process_query_multiple_models(query: str) -> Dict[str, Any]:
         final_state = await run_graph_with_query(graph, state)
         state.update(final_state)
 
+        # Detener temporizador
+        end_time = time.time()
+        execution_time = end_time - start_time
+        execution_times[model] = execution_time
+
         # Extraer la última respuesta del historial
         msgs = final_state.get("messages") or state.get("messages") or []
         if msgs:
@@ -211,8 +228,10 @@ async def process_query_multiple_models(query: str) -> Dict[str, Any]:
             response[model] = content if content is not None else ""
         else:
             response[model] = ""
+        
+        logger.info(f"Tiempo de ejecución para {model}: {execution_time:.2f} segundos")
 
-    return response
+    return response, execution_times
 
 # ====== Endpoints de la API ======
 @app.get("/health", tags=["system"])
@@ -237,10 +256,10 @@ async def query_endpoint(payload: QueryIn):
         raise HTTPException(status_code=400, detail="Falta 'query'.")
 
     try:
-        results = await process_query_multiple_models(q)
+        results, times = await process_query_multiple_models(q)
         
-        # Guardar en la base de datos
-        save_query_result(q, answer, especialidad, results)
+        # Guardar en la base de datos con los tiempos
+        save_query_result(q, answer, especialidad, results, times)
         
         return {"results": results}
     except Exception as e:
@@ -364,6 +383,39 @@ async def index_endpoint(
     except Exception as e:
         logger.error(f"Error en /index: {e}")
         raise HTTPException(status_code=500, detail="Error indexando el documento")
+
+@app.get("/resultados", tags=["query"])
+def obtener_resultados():
+    """
+    Devuelve todos los registros de la base de datos en formato JSON.
+    """
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        conn.row_factory = sqlite3.Row  # Para obtener resultados como diccionarios
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, pregunta, respuesta, especialidad, gemma, mistral, llama, 
+                   gemma_time, mistral_time, llama_time, created_at
+            FROM query_results
+            ORDER BY created_at DESC
+        """)
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        # Convertir a lista de diccionarios
+        resultados = [dict(row) for row in rows]
+        
+        return {
+            "status": "ok",
+            "total": len(resultados),
+            "resultados": resultados
+        }
+    except Exception as e:
+        logger.error(f"Error obteniendo resultados: {e}")
+        raise HTTPException(status_code=500, detail="Error obteniendo resultados de la base de datos")
+
 
 # ====== Inicialización de recursos pesados ======
 @app.on_event("startup")
