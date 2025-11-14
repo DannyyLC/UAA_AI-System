@@ -87,20 +87,20 @@ def save_query_result(pregunta: str, respuesta: str, especialidad: str, results:
     """Guarda el resultado de una consulta en la base de datos."""
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.cursor()
-    
+
     gemma = results.get("gemma3:4b", "")
     mistral = results.get("mistral:7b", "")
     llama = results.get("llama3.1:8b", "")
-    
+
     gemma_time = times.get("gemma3:4b", 0.0)
     mistral_time = times.get("mistral:7b", 0.0)
     llama_time = times.get("llama3.1:8b", 0.0)
-    
+
     cursor.execute("""
         INSERT INTO query_results (pregunta, respuesta, especialidad, gemma, mistral, llama, gemma_time, mistral_time, llama_time)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (pregunta, respuesta, especialidad, gemma, mistral, llama, gemma_time, mistral_time, llama_time))
-    
+
     conn.commit()
     conn.close()
 
@@ -179,7 +179,7 @@ async def process_query_multiple_models(query: str) -> tuple[Dict[str, Any], Dic
 
     for model in models:
         logger.info(f"\n============= RESPUESTA {model.upper()} =============")
-        
+
         # Iniciar temporizador
         start_time = time.time()
 
@@ -228,7 +228,7 @@ async def process_query_multiple_models(query: str) -> tuple[Dict[str, Any], Dic
             response[model] = content if content is not None else ""
         else:
             response[model] = ""
-        
+
         logger.info(f"Tiempo de ejecución para {model}: {execution_time:.2f} segundos")
 
     return response, execution_times
@@ -250,17 +250,17 @@ async def query_endpoint(payload: QueryIn):
     """
     q = (payload.query or "").strip()
     answer = (payload.answer or "").strip()
-    especialidad = (payload.especialidad or "").strip()
+    especialidad = (payload.especialidad or "").strip().replace(" ", "_")
 
     if not q:
         raise HTTPException(status_code=400, detail="Falta 'query'.")
 
     try:
         results, times = await process_query_multiple_models(q)
-        
+
         # Guardar en la base de datos con los tiempos
         save_query_result(q, answer, especialidad, results, times)
-        
+
         return {"results": results}
     except Exception as e:
         logger.error(f"Error en /query: {e}")
@@ -350,6 +350,7 @@ async def index_endpoint(
     - user_id: agregado a la metadata de chunks
     """
     try:
+        collection = collection.strip().replace(" ", "_")
         # Leer archivo subido
         contents = await file.read()
         if not contents:
@@ -382,7 +383,7 @@ async def index_endpoint(
         raise
     except Exception as e:
         logger.error(f"Error en /index: {e}")
-        raise HTTPException(status_code=500, detail="Error indexando el documento")
+        raise HTTPException(status_code=500, detail=f"Error indexando el documento: {e}")
 
 @app.get("/resultados", tags=["query"])
 def obtener_resultados():
@@ -393,20 +394,20 @@ def obtener_resultados():
         conn = sqlite3.connect(str(DB_PATH))
         conn.row_factory = sqlite3.Row  # Para obtener resultados como diccionarios
         cursor = conn.cursor()
-        
+
         cursor.execute("""
-            SELECT id, pregunta, respuesta, especialidad, gemma, mistral, llama, 
+            SELECT id, pregunta, respuesta, especialidad, gemma, mistral, llama,
                    gemma_time, mistral_time, llama_time, created_at
             FROM query_results
             ORDER BY created_at DESC
         """)
-        
+
         rows = cursor.fetchall()
         conn.close()
-        
+
         # Convertir a lista de diccionarios
         resultados = [dict(row) for row in rows]
-        
+
         return {
             "status": "ok",
             "total": len(resultados),
@@ -415,7 +416,6 @@ def obtener_resultados():
     except Exception as e:
         logger.error(f"Error obteniendo resultados: {e}")
         raise HTTPException(status_code=500, detail="Error obteniendo resultados de la base de datos")
-
 
 # ====== Inicialización de recursos pesados ======
 @app.on_event("startup")
@@ -431,7 +431,7 @@ async def on_startup():
             persist_directory="./chroma_db"
         )
         logger.info("EmbeddingProcessor inicializado en startup.")
-        
+
         # Inicializar base de datos
         init_database()
         logger.info("Base de datos SQLite inicializada en startup.")
