@@ -1,6 +1,40 @@
-version: '3.8'
-
 services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"  # REST API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_storage:/qdrant/storage
+      - qdrant_snapshots:/qdrant/snapshots
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"  # Puerto para clientes externos
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:9094,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9094,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    restart: unless-stopped
+
   rag-app:
     build: .
     ports:
@@ -8,12 +42,21 @@ services:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
-#      - ./chroma_db:/app/chroma_db
     environment:
       - NVIDIA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-all}
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      # ¡No pongas CUDA_VISIBLE_DEVICES=""!
-    gpus: "all"        # <- ESTA es la clave con Compose
+      - QDRANT_URL=http://qdrant:6333
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+    depends_on:
+      - qdrant
+      - kafka
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     profiles:
       - gpu
 
@@ -24,13 +67,20 @@ services:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
-#      - ./chroma_db:/app/chroma_db
     environment:
       - NVIDIA_VISIBLE_DEVICES=
       - CUDA_VISIBLE_DEVICES=
+      - QDRANT_URL=http://qdrant:6333
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+    depends_on:
+      - qdrant
+      - kafka
     profiles:
       - cpu
 
 volumes:
   ollama_models:
     external: false
+  qdrant_storage:
+  qdrant_snapshots:
+  kafka_data:
