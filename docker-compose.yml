@@ -6,8 +6,8 @@ services:
       - "6333:6333"  # REST API
       - "6334:6334"  # gRPC API
     volumes:
-      - qdrant_storage:/qdrant/storage
-      - qdrant_snapshots:/qdrant/snapshots
+      - ./data/qdrant/storage:/qdrant/storage
+      - ./data/qdrant/snapshots:/qdrant/snapshots
     environment:
       - QDRANT__SERVICE__GRPC_PORT=6334
     restart: unless-stopped
@@ -18,7 +18,7 @@ services:
     ports:
       - "9092:9092"  # Puerto para clientes externos
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - ./data/kafka:/var/lib/kafka/data
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: 'broker,controller'
@@ -41,12 +41,14 @@ services:
       - "8000:8000"
       - "11434:11434"
     volumes:
-      - ollama_models:/root/.ollama
+      - ./data/ollama:/root/.ollama
+      - ./data/db:/app/data/db
     environment:
       - NVIDIA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-all}
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - QDRANT_URL=http://qdrant:6333
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - DATABASE_PATH=/app/data/db/app.db
     depends_on:
       - qdrant
       - kafka
@@ -66,12 +68,14 @@ services:
       - "8000:8000"
       - "11434:11434"
     volumes:
-      - ollama_models:/root/.ollama
+      - ./data/ollama:/root/.ollama
+      - ./data/db:/app/data/db
     environment:
       - NVIDIA_VISIBLE_DEVICES=
       - CUDA_VISIBLE_DEVICES=
       - QDRANT_URL=http://qdrant:6333
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - DATABASE_PATH=/app/data/db/app.db
     depends_on:
       - qdrant
       - kafka
