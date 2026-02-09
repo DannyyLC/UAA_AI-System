@@ -28,6 +28,12 @@ service IndexingService {
 
   // Listar colecciones disponibles en Qdrant
   rpc ListCollections(ListCollectionsRequest) returns (ListCollectionsResponse);
+
+  // Listar sources (documentos) de un usuario, opcionalmente filtrado por tema
+  rpc ListSources(ListSourcesRequest) returns (ListSourcesResponse);
+
+  // Eliminar un source (documento) específico de un usuario
+  rpc DeleteSource(DeleteSourceRequest) returns (DeleteSourceResponse);
 }
 
 // --- Estados de un trabajo ---
@@ -48,7 +54,7 @@ message SubmitDocumentRequest {
   string filename = 2;
   bytes content = 3; // Contenido del archivo
   string mime_type = 4; // "application/pdf", "text/plain", etc.
-  string category = 5; // Categoría académica destino
+  string topic = 5; // Tema académico (matemáticas, programación, etc.)
   map<string, string> metadata = 6; // Metadatos opcionales
 }
 
@@ -70,7 +76,7 @@ message GetJobStatusResponse {
   string job_id = 2;
   JobStatus status = 3;
   string filename = 4;
-  string category = 5;
+  string topic = 5;
   int32 chunks_created = 6; // Chunks generados
   string error_message = 7; // Mensaje de error (si falló)
   common.v1.Timestamp created_at = 8;
@@ -89,7 +95,7 @@ message ListJobsRequest {
 message JobSummary {
   string job_id = 1;
   string filename = 2;
-  string category = 3;
+  string topic = 3;
   JobStatus status = 4;
   int32 chunks_created = 5;
   string error_message = 6;
@@ -130,5 +136,41 @@ message ListCollectionsResponse {
 message CollectionInfo {
   string name = 1;
   int64 vectors_count = 2;
-  string category = 3;
+  string topic = 3;
+}
+
+// --- ListSources ---
+
+message ListSourcesRequest {
+  string user_id = 1; // Obligatorio: documentos de este usuario
+  string topic = 2; // Opcional: filtrar por tema
+}
+
+message SourceInfo {
+  string source = 1; // Nombre del documento original
+  string topic = 2; // Tema al que pertenece
+  int32 chunks_count = 3; // Número de chunks indexados
+  common.v1.Timestamp indexed_at = 4; // Fecha de indexación
+}
+
+message ListSourcesResponse {
+  bool success = 1;
+  repeated SourceInfo sources = 2;
+  int32 total = 3;
+  common.v1.Error error = 4;
+}
+
+// --- DeleteSource ---
+
+message DeleteSourceRequest {
+  string user_id = 1; // Obligatorio: ownership
+  string source = 2; // Nombre del documento a eliminar
+  string topic = 3; // Opcional: si el mismo source existe en varios temas
+}
+
+message DeleteSourceResponse {
+  bool success = 1;
+  int32 chunks_deleted = 2; // Número de chunks eliminados de Qdrant
+  string message = 3;
+  common.v1.Error error = 4;
 }

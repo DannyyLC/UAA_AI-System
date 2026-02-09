@@ -27,10 +27,11 @@ service RAGService {
 
 message SearchRequest {
   string query = 1; // Consulta del usuario
-  string category = 2; // Categoría académica (opcional, si ya se clasificó)
-  int32 top_k = 3; // Número de resultados (default: 5)
-  float threshold = 4; // Umbral de similitud mínimo (default: 0.7)
-  common.v1.RequestMetadata metadata = 5;
+  string user_id = 2; // Filtro obligatorio: solo documentos del usuario
+  string topic = 3; // Filtro opcional: tema (matemáticas, programación, etc.)
+  int32 top_k = 4; // Número de resultados (default: 5)
+  float threshold = 5; // Umbral de similitud mínimo (default: 0.7)
+  common.v1.RequestMetadata metadata = 6;
 }
 
 message SearchResult {
@@ -39,7 +40,7 @@ message SearchResult {
   string content = 3; // Texto del chunk relevante
   float score = 4; // Score de similitud
   string source = 5; // Nombre del documento original
-  string category = 6; // Categoría del documento
+  string topic = 6; // Tema del documento
   int32 page = 7; // Página del documento (si aplica)
   map<string, string> metadata = 8; // Metadatos adicionales
 }
@@ -60,13 +61,13 @@ message ClassifyRequest {
 
 message ClassifyResponse {
   bool success = 1;
-  string category = 2; // Categoría principal
-  repeated CategoryScore categories = 3; // Todas las categorías con score
+  string topic = 2; // Tema principal
+  repeated TopicScore topics = 3; // Todos los temas con score
   common.v1.Error error = 4;
 }
 
-message CategoryScore {
-  string category = 1;
+message TopicScore {
+  string topic = 1;
   float score = 2;
 }
 
