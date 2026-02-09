@@ -1,42 +1,183 @@
-# 🤖 Sistema de Agentes IA - Universidad Autónoma de Aguascalientes (UAA)
+# Sistema RAG Distribuido - UAA
 
-![UAA Logo](https://www.google.com/imgres?q=logo%20uaa&imgurl=https%3A%2F%2Fwww.uaa.mx%2Fportal%2Fwp-content%2Fuploads%2F2022%2F08%2FUAA-LOGO.png&imgrefurl=https%3A%2F%2Fwww.uaa.mx%2Fportal%2Fnuestra-universidad%2Finstitucion%2Flogotipo%2F&docid=_CrPmbAO4KRiGM&tbnid=JqdkafS3zrx5xM&vet=12ahUKEwidgbqizuKLAxV2LkQIHU0HJYkQM3oECBwQAA..i&w=656&h=318&hcb=2&ved=2ahUKEwidgbqizuKLAxV2LkQIHU0HJYkQM3oECBwQAA)
+Sistema de pregunta-respuesta académico basado en Retrieval-Augmented Generation (RAG) con arquitectura de microservicios.
 
-## 🌟 Descripción General
+## Arquitectura del Sistema
 
-Este proyecto desarrolla un sistema avanzado de agentes de Inteligencia Artificial para la Universidad Autónoma de Aguascalientes (UAA). Utilizando la tecnología LangGraph, el sistema implementa una arquitectura de agentes múltiples que mejora significativamente las capacidades de procesamiento de consultas y generación de respuestas.
+### Descripción General
 
-## ✨ Características Principales
+El sistema implementa una arquitectura distribuida basada en microservicios que se comunican mediante gRPC para operaciones síncronas y Kafka para procesamiento asíncrono. El flujo principal permite a un modelo de lenguaje (LLM) decidir autónomamente cuándo necesita buscar información en la base de conocimiento mediante function calling nativo.
 
-- **Arquitectura multi-agente** diseñada específicamente para las necesidades de la UAA
-- **Procesamiento avanzado de lenguaje natural** para entender consultas complejas
-- **Sistema de expansión de preguntas** para una comprensión más profunda de las consultas iniciales
-- **Componente de retrieval** para acceder a información relevante de manera eficiente
-- **Implementación de "IA as a Judge"** para evaluar y mejorar la calidad de las respuestas
+Toda la infraestructura se orquesta mediante **Docker Compose** (sin Dockerfiles individuales). Los servicios Python corren directamente desde el código fuente montado como volumen, facilitando el desarrollo local.
 
-## 🔍 Componentes del Sistema
+### Componentes Principales
 
-El sistema está construido con LangGraph y cuenta con los siguientes nodos principales:
+#### 1. API Gateway (FastAPI)
+- **Puerto**: 8000
+- **Responsabilidades**:
+  - Exponer API REST al frontend
+  - Validación de requests
+  - Orquestación de llamadas gRPC a microservicios
+  - Gestión de CORS y rate limiting
+  - SSE (Server-Sent Events) para streaming de respuestas del LLM
 
-### 🧠 Router
-Dirige las consultas entrantes al componente más adecuado del sistema, optimizando el flujo de información.
+#### 2. Auth Service (gRPC)
+- **Puerto**: 50051
+- **Responsabilidades**:
+  - Registro y autenticación de usuarios
+  - Gestión de tokens JWT
+  - Validación de sesiones
+  - Acceso a PostgreSQL (tablas: users, sessions)
+  - Publicación de eventos de autenticación en Kafka
 
-### 💡 Expansor de Preguntas
-Analiza la consulta inicial y genera preguntas adicionales relacionadas para una comprensión más completa.
+#### 3. Chat Service (gRPC)
+- **Puerto**: 50052
+- **Responsabilidades**:
+  - Gestión de conversaciones y mensajes
+  - Integración con LiteLLM (múltiples proveedores de LLM)
+  - Decisión automática de uso de RAG tool mediante function calling
+  - Almacenamiento de mensajes en PostgreSQL
+  - Publicación de eventos de chat en Kafka
 
-### 📚 Retrieval
-Busca y recupera información relevante de las bases de conocimiento de la universidad.
+#### 4. RAG Service (gRPC)
+- **Puerto**: 50054
+- **Responsabilidades**:
+  - Clasificación de categorías de consultas
+  - Búsqueda semántica en Qdrant
+  - Ranking y extracción de contexto relevante
+  - Llamado exclusivamente por Chat Service cuando el LLM decide usar la tool
 
-### ⚖️ IA as a Judge
-Evalúa la calidad, precisión y relevancia de las respuestas generadas, asegurando altos estándares de calidad.
+#### 5. Indexing Workers
+- **Responsabilidades**:
+  - Consumo de trabajos desde Kafka
+  - Procesamiento de documentos (chunking, embeddings)
+  - Almacenamiento de vectores en Qdrant
+  - Actualización de estado de trabajos en PostgreSQL
+  - Procesamiento paralelo mediante múltiples workers
 
-## 🚀 Próximamente
+#### 6. Audit Consumer
+- **Responsabilidades**:
+  - Consumo de eventos de auditoría desde Kafka
+  - Almacenamiento permanente en PostgreSQL (tabla: audit_log)
+  - Registro de todas las operaciones del sistema
 
-- Documentación completa del sistema
-- Guías de implementación y ejecución
-- Ejemplos de uso práctico
-- Casos de estudio dentro del entorno universitario
+### Bases de Datos y Almacenamiento
 
----
+#### PostgreSQL
+- **Puerto**: 5432
+- **Base de datos**: `rag_uaa`
+- **Tablas**:
+  - `users`: Información de usuarios
+  - `sessions`: Tokens y sesiones activas
+  - `conversations`: Conversaciones de usuarios
+  - `messages`: Mensajes de cada conversación
+  - `indexing_jobs`: Estado de trabajos de indexación
+  - `audit_log`: Registro de eventos del sistema
+- **Ventajas sobre SQLite**:
+  - Soporte de escritura concurrente (múltiples servicios escribiendo simultáneamente)
+  - Conexiones vía red (cada microservicio se conecta de forma independiente)
+  - Transacciones ACID completas con aislamiento real
 
-<p align="center">© 2025 Universidad Autónoma de Aguascalientes - Proyecto de Inteligencia Artificial</p>
+#### Qdrant (Vector Database)
+- **Puerto REST**: 6333
+- **Puerto gRPC**: 6334
+- **Responsabilidades**:
+  - Almacenamiento de embeddings de documentos
+  - Búsqueda semántica mediante vectores
+  - Gestión de colecciones por categoría académica
+
+#### Kafka
+- **Puerto**: 9092
+- **Responsabilidades**:
+  - Cola de trabajos de indexación (asíncrona)
+  - Event bus para auditoría (fire and forget)
+  - Topics:
+    - `indexing.queue`: Trabajos de procesamiento de documentos
+    - `indexing.dlq`: Dead letter queue para fallos
+    - `audit.events`: Eventos de auditoría del sistema
+
+## Estructura de Directorios
+
+```
+AgenticSystem/
+├── docker-compose.yml          # Orquestación de todos los servicios
+├── requirements.txt            # Dependencias Python
+├── environment.yml             # Ambiente Conda (desarrollo local)
+├── README.md                   # Documentación
+│
+├── proto/                      # Protocol Buffers definitions
+│   ├── common.proto           # Tipos compartidos (User, Token, Error)
+│   ├── auth.proto             # Definiciones Auth Service
+│   ├── chat.proto             # Definiciones Chat Service
+│   ├── rag.proto              # Definiciones RAG Service
+│   └── indexing.proto         # Definiciones Indexing Service
+│
+├── src/
+│   ├── gateway/               # API Gateway (FastAPI)
+│   │   ├── main.py           # Aplicación principal
+│   │   ├── routes/           # Endpoints REST
+│   │   │   ├── auth.py
+│   │   │   ├── chat.py       # Incluye endpoint SSE para streaming
+│   │   │   ├── documents.py
+│   │   │   └── health.py
+│   │   ├── grpc_clients/     # Clientes gRPC
+│   │   │   ├── auth_client.py
+│   │   │   ├── chat_client.py
+│   │   │   └── rag_client.py
+│   │   ├── sse.py            # Handler SSE (Server-Sent Events)
+│   │   └── middleware/       # Middlewares (CORS, auth, etc)
+│   │
+│   ├── services/
+│   │   ├── auth/             # Auth Service (gRPC Server)
+│   │   │   ├── server.py     # Servidor gRPC
+│   │   │   ├── handlers.py   # Lógica de autenticación
+│   │   │   ├── database.py   # Acceso a PostgreSQL
+│   │   │   ├── jwt_manager.py
+│   │   │   └── kafka_producer.py
+│   │   │
+│   │   ├── chat/             # Chat Service (gRPC Server)
+│   │   │   ├── server.py
+│   │   │   ├── handlers.py
+│   │   │   ├── litellm_client.py  # Cliente LiteLLM
+│   │   │   ├── tools.py      # Definición RAG tool
+│   │   │   ├── database.py   # Acceso a PostgreSQL
+│   │   │   └── kafka_producer.py
+│   │   │
+│   │   ├── rag/              # RAG Service (gRPC Server)
+│   │   │   ├── server.py
+│   │   │   ├── handlers.py
+│   │   │   ├── retrieval.py  # Búsqueda en Qdrant
+│   │   │   ├── router.py     # Clasificación de categorías
+│   │   │   ├── qdrant_client.py
+│   │   │   └── kafka_producer.py
+│   │   │
+│   │   └── indexing/         # Indexing Workers
+│   │       ├── worker.py     # Worker principal
+│   │       ├── document_processor.py
+│   │       ├── embeddings.py
+│   │       └── qdrant_client.py
+│   │
+│   ├── kafka/
+│   │   ├── config.py         # Configuración de Kafka
+│   │   ├── producer.py       # Producer base
+│   │   ├── consumer.py       # Consumer base
+│   │   └── consumers/
+│   │       └── audit_consumer.py  # Consumer de auditoría
+│   │
+│   └── shared/               # Código compartido
+│       ├── configuration.py  # Configuración global
+│       ├── database.py       # Cliente PostgreSQL (asyncpg / psycopg)
+│       ├── logging_utils.py  # Utilidades de logging
+│       ├── models.py         # Modelos Pydantic
+│       └── utils.py          # Utilidades generales
+│
+├── data/                     # Datos persistentes (gitignored)
+│   ├── postgres/             # Datos de PostgreSQL
+│   ├── qdrant/              # Datos de Qdrant
+│   └── kafka/               # Logs de Kafka
+│
+└── tests/                   # Tests
+    ├── unit/
+    ├── integration/
+    └── conftest.py
+```

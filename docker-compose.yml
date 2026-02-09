@@ -1,22 +1,55 @@
 services:
+
+  # ============================================================
+  # Base de datos relacional
+  # ============================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rag_uaa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_uaa_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-rag_uaa}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag_uaa} -d ${POSTGRES_DB:-rag_uaa}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================
+  # Base de datos vectorial
+  # ============================================================
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
     ports:
-      - "6333:6333"  # REST API
-      - "6334:6334"  # gRPC API
+      - "${QDRANT_REST_PORT:-6333}:6333"   # REST API
+      - "${QDRANT_GRPC_PORT:-6334}:6334"   # gRPC API
     volumes:
       - ./data/qdrant/storage:/qdrant/storage
       - ./data/qdrant/snapshots:/qdrant/snapshots
     environment:
       - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
+  # ============================================================
+  # Message broker
+  # ============================================================
   kafka:
     image: apache/kafka:latest
     container_name: kafka
     ports:
-      - "9092:9092"  # Puerto para clientes externos
+      - "${KAFKA_PORT:-9092}:9092"          # Clientes externos
     volumes:
       - ./data/kafka:/var/lib/kafka/data
     environment:
@@ -33,58 +66,10 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG_DIRS: '/var/lib/kafka/data'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
-
-  rag-app:
-    build: .
-    ports:
-      - "8000:8000"
-      - "11434:11434"
-    volumes:
-      - ./data/ollama:/root/.ollama
-      - ./data/db:/app/data/db
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-all}
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - QDRANT_URL=http://qdrant:6333
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
-      - DATABASE_PATH=/app/data/db/app.db
-    depends_on:
-      - qdrant
-      - kafka
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    profiles:
-      - gpu
-
-  rag-app-cpu:
-    build: .
-    ports:
-      - "8000:8000"
-      - "11434:11434"
-    volumes:
-      - ./data/ollama:/root/.ollama
-      - ./data/db:/app/data/db
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=
-      - CUDA_VISIBLE_DEVICES=
-      - QDRANT_URL=http://qdrant:6333
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
-      - DATABASE_PATH=/app/data/db/app.db
-    depends_on:
-      - qdrant
-      - kafka
-    profiles:
-      - cpu
-
-volumes:
-  ollama_models:
-    external: false
-  qdrant_storage:
-  qdrant_snapshots:
-  kafka_data:
