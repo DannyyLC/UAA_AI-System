@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "common.proto";
+
+option go_package = "proto/auth/v1";
+
+// ============================================================
+// Auth Service - Puerto 50051
+// Registro, autenticación y gestión de sesiones
+// ============================================================
+
+service AuthService {
+  // Registro de nuevo usuario
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Inicio de sesión
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Cerrar sesión (invalida token)
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+  // Validar token JWT (usado por el Gateway en cada request)
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // Refrescar token expirado
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  // Obtener perfil de usuario
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+}
+
+// --- Register ---
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+  // Rol siempre es USER por defecto — los ADMIN se crean manualmente
+}
+
+message RegisterResponse {
+  bool success = 1;
+  common.v1.User user = 2;
+  common.v1.Error error = 3;
+}
+
+// --- Login ---
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  bool success = 1;
+  common.v1.User user = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  int64 expires_in = 5; // Segundos hasta expiración
+  common.v1.Error error = 6;
+}
+
+// --- Logout ---
+
+message LogoutRequest {
+  string access_token = 1;
+}
+
+message LogoutResponse {
+  bool success = 1;
+  string message = 2;
+  common.v1.Error error = 3;
+}
+
+// --- ValidateToken ---
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  common.v1.User user = 2; // Usuario asociado al token
+  common.v1.Error error = 3;
+}
+
+// --- RefreshToken ---
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  bool success = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  int64 expires_in = 4;
+  common.v1.Error error = 5;
+}
+
+// --- GetProfile ---
+
+message GetProfileRequest {
+  string user_id = 1;
+}
+
+message GetProfileResponse {
+  bool success = 1;
+  common.v1.User user = 2;
+  common.v1.Error error = 3;
+}

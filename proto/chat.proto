@@ -1,0 +1,157 @@
+syntax = "proto3";
+
+package chat.v1;
+
+import "common.proto";
+
+option go_package = "proto/chat/v1";
+
+// ============================================================
+// Chat Service - Puerto 50052
+// Gestión de conversaciones, mensajes e integración con LLM
+// ============================================================
+
+service ChatService {
+  // Crear nueva conversación
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+
+  // Listar conversaciones de un usuario
+  rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+
+  // Obtener conversación con sus mensajes
+  rpc GetConversation(GetConversationRequest) returns (GetConversationResponse);
+
+  // Eliminar conversación
+  rpc DeleteConversation(DeleteConversationRequest) returns (DeleteConversationResponse);
+
+  // Enviar mensaje y obtener respuesta del LLM (streaming via server-side)
+  rpc SendMessage(SendMessageRequest) returns (stream SendMessageResponse);
+
+  // Obtener mensajes de una conversación (paginado)
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+}
+
+// --- Tipos de mensaje ---
+
+enum MessageRole {
+  MESSAGE_ROLE_UNSPECIFIED = 0;
+  MESSAGE_ROLE_USER = 1;
+  MESSAGE_ROLE_ASSISTANT = 2;
+  MESSAGE_ROLE_SYSTEM = 3;
+  MESSAGE_ROLE_TOOL = 4; // Respuesta de la RAG tool
+}
+
+message Message {
+  string id = 1;
+  string conversation_id = 2;
+  MessageRole role = 3;
+  string content = 4;
+  bool used_rag = 5; // Si el LLM decidió usar RAG
+  repeated string sources = 6; // Fuentes del contexto RAG (si aplica)
+  common.v1.Timestamp created_at = 7;
+}
+
+message Conversation {
+  string id = 1;
+  string user_id = 2;
+  string title = 3;
+  common.v1.Timestamp created_at = 4;
+  common.v1.Timestamp updated_at = 5;
+  Message last_message = 6; // Último mensaje (para preview)
+}
+
+// --- CreateConversation ---
+
+message CreateConversationRequest {
+  string user_id = 1;
+  string title = 2; // Opcional: se puede auto-generar del primer mensaje
+}
+
+message CreateConversationResponse {
+  bool success = 1;
+  Conversation conversation = 2;
+  common.v1.Error error = 3;
+}
+
+// --- ListConversations ---
+
+message ListConversationsRequest {
+  string user_id = 1;
+  common.v1.PaginationRequest pagination = 2;
+}
+
+message ListConversationsResponse {
+  bool success = 1;
+  repeated Conversation conversations = 2;
+  common.v1.PaginationResponse pagination = 3;
+  common.v1.Error error = 4;
+}
+
+// --- GetConversation ---
+
+message GetConversationRequest {
+  string conversation_id = 1;
+  string user_id = 2; // Para validar ownership
+}
+
+message GetConversationResponse {
+  bool success = 1;
+  Conversation conversation = 2;
+  repeated Message messages = 3;
+  common.v1.Error error = 4;
+}
+
+// --- DeleteConversation ---
+
+message DeleteConversationRequest {
+  string conversation_id = 1;
+  string user_id = 2;
+}
+
+message DeleteConversationResponse {
+  bool success = 1;
+  string message = 2;
+  common.v1.Error error = 3;
+}
+
+// --- SendMessage ---
+
+message SendMessageRequest {
+  string conversation_id = 1;
+  string user_id = 2;
+  string content = 3; // Mensaje del usuario
+}
+
+// Streaming: el servidor envía chunks progresivos
+message SendMessageResponse {
+  // Tipo de chunk en el stream
+  enum ChunkType {
+    CHUNK_TYPE_UNSPECIFIED = 0;
+    CHUNK_TYPE_TOKEN = 1; // Token parcial del LLM
+    CHUNK_TYPE_RAG_START = 2; // El LLM decidió usar RAG (notificación)
+    CHUNK_TYPE_RAG_DONE = 3; // RAG completado, contexto inyectado
+    CHUNK_TYPE_DONE = 4; // Respuesta completa
+    CHUNK_TYPE_ERROR = 5; // Error durante generación
+  }
+
+  ChunkType chunk_type = 1;
+  string token = 2; // Token parcial (cuando chunk_type = TOKEN)
+  Message message = 3; // Mensaje completo (cuando chunk_type = DONE)
+  bool used_rag = 4; // Si se usó RAG en la respuesta
+  common.v1.Error error = 5;
+}
+
+// --- GetMessages ---
+
+message GetMessagesRequest {
+  string conversation_id = 1;
+  string user_id = 2;
+  common.v1.PaginationRequest pagination = 3;
+}
+
+message GetMessagesResponse {
+  bool success = 1;
+  repeated Message messages = 2;
+  common.v1.PaginationResponse pagination = 3;
+  common.v1.Error error = 4;
+}

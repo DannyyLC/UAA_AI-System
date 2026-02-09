@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package rag.v1;
+
+import "common.proto";
+
+option go_package = "proto/rag/v1";
+
+// ============================================================
+// RAG Service - Puerto 50054
+// Búsqueda semántica y recuperación de contexto
+// Llamado exclusivamente por Chat Service via function calling
+// ============================================================
+
+service RAGService {
+  // Búsqueda semántica: recibe query, retorna contexto relevante
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // Clasificar la categoría académica de una consulta
+  rpc Classify(ClassifyRequest) returns (ClassifyResponse);
+
+  // Health check del servicio y conexión con Qdrant
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// --- Search ---
+
+message SearchRequest {
+  string query = 1; // Consulta del usuario
+  string category = 2; // Categoría académica (opcional, si ya se clasificó)
+  int32 top_k = 3; // Número de resultados (default: 5)
+  float threshold = 4; // Umbral de similitud mínimo (default: 0.7)
+  common.v1.RequestMetadata metadata = 5;
+}
+
+message SearchResult {
+  string document_id = 1;
+  string chunk_id = 2;
+  string content = 3; // Texto del chunk relevante
+  float score = 4; // Score de similitud
+  string source = 5; // Nombre del documento original
+  string category = 6; // Categoría del documento
+  int32 page = 7; // Página del documento (si aplica)
+  map<string, string> metadata = 8; // Metadatos adicionales
+}
+
+message SearchResponse {
+  bool success = 1;
+  repeated SearchResult results = 2;
+  string context = 3; // Contexto concatenado listo para inyectar al LLM
+  int32 total = 4; // Total de resultados encontrados
+  common.v1.Error error = 5;
+}
+
+// --- Classify ---
+
+message ClassifyRequest {
+  string query = 1; // Consulta a clasificar
+}
+
+message ClassifyResponse {
+  bool success = 1;
+  string category = 2; // Categoría principal
+  repeated CategoryScore categories = 3; // Todas las categorías con score
+  common.v1.Error error = 4;
+}
+
+message CategoryScore {
+  string category = 1;
+  float score = 2;
+}
+
+// --- HealthCheck ---
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  bool qdrant_connected = 2;
+  int32 collections_count = 3;
+  repeated string collections = 4;
+}

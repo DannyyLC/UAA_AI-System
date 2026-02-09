@@ -1,0 +1,10 @@
+version: v2
+lint:
+  use:
+    - STANDARD
+  except:
+    # Permitimos estructura plana en proto/ sin subdirectorios por paquete
+    - PACKAGE_DIRECTORY_MATCH
+breaking:
+  use:
+    - FILE

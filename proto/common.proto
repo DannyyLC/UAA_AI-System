@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "proto/common/v1";
+
+// ============================================================
+// Tipos compartidos entre todos los servicios
+// ============================================================
+
+// --- Timestamps ---
+
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+// --- Roles ---
+
+enum UserRole {
+  USER_ROLE_UNSPECIFIED = 0;
+  USER_ROLE_USER  = 1; // Rol por defecto al registrarse
+  USER_ROLE_ADMIN = 2; // Solo predefinido (no se puede registrar como admin)
+}
+
+// --- Usuario ---
+
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  UserRole role = 4;
+  Timestamp created_at = 5;
+}
+
+// --- Paginación ---
+
+message PaginationRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message PaginationResponse {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 total = 3;
+  int32 total_pages = 4;
+}
+
+// --- Errores ---
+
+message Error {
+  int32 code = 1;
+  string message = 2;
+  string detail = 3;
+}
+
+// --- Respuesta genérica de estado ---
+
+message StatusResponse {
+  bool success = 1;
+  string message = 2;
+  Error error = 3;
+}
+
+// --- Metadatos de contexto (para auditoría / trazabilidad) ---
+
+message RequestMetadata {
+  string user_id = 1;
+  string session_id = 2;
+  string request_id = 3; // UUID para trazabilidad
+  string client_ip = 4;
+}

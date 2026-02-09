@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package indexing.v1;
+
+import "common.proto";
+
+option go_package = "proto/indexing/v1";
+
+// ============================================================
+// Indexing Service
+// Gestión de trabajos de indexación de documentos
+// Los trabajos se encolan en Kafka y los procesan los workers
+// Este servicio expone RPCs para submit y consultar estado
+// ============================================================
+
+service IndexingService {
+  // Enviar documento para indexación (encola en Kafka)
+  rpc SubmitDocument(SubmitDocumentRequest) returns (SubmitDocumentResponse);
+
+  // Consultar estado de un trabajo de indexación
+  rpc GetJobStatus(GetJobStatusRequest) returns (GetJobStatusResponse);
+
+  // Listar trabajos de indexación (por usuario o globales)
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+
+  // Cancelar un trabajo pendiente
+  rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
+
+  // Listar colecciones disponibles en Qdrant
+  rpc ListCollections(ListCollectionsRequest) returns (ListCollectionsResponse);
+}
+
+// --- Estados de un trabajo ---
+
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  JOB_STATUS_PENDING = 1; // Encolado en Kafka, esperando worker
+  JOB_STATUS_PROCESSING = 2; // Worker lo está procesando
+  JOB_STATUS_COMPLETED = 3; // Procesado exitosamente
+  JOB_STATUS_FAILED = 4; // Falló (se puede reintentar o va a DLQ)
+  JOB_STATUS_CANCELLED = 5; // Cancelado por el usuario
+}
+
+// --- SubmitDocument ---
+
+message SubmitDocumentRequest {
+  string user_id = 1;
+  string filename = 2;
+  bytes content = 3; // Contenido del archivo
+  string mime_type = 4; // "application/pdf", "text/plain", etc.
+  string category = 5; // Categoría académica destino
+  map<string, string> metadata = 6; // Metadatos opcionales
+}
+
+message SubmitDocumentResponse {
+  bool success = 1;
+  string job_id = 2; // ID del trabajo para seguimiento
+  JobStatus status = 3; // Siempre PENDING al crear
+  common.v1.Error error = 4;
+}
+
+// --- GetJobStatus ---
+
+message GetJobStatusRequest {
+  string job_id = 1;
+}
+
+message GetJobStatusResponse {
+  bool success = 1;
+  string job_id = 2;
+  JobStatus status = 3;
+  string filename = 4;
+  string category = 5;
+  int32 chunks_created = 6; // Chunks generados
+  string error_message = 7; // Mensaje de error (si falló)
+  common.v1.Timestamp created_at = 8;
+  common.v1.Timestamp updated_at = 9;
+  common.v1.Error error = 10;
+}
+
+// --- ListJobs ---
+
+message ListJobsRequest {
+  string user_id = 1; // Vacío = todos (admin)
+  JobStatus status = 2; // Filtrar por estado (0 = todos)
+  common.v1.PaginationRequest pagination = 3;
+}
+
+message JobSummary {
+  string job_id = 1;
+  string filename = 2;
+  string category = 3;
+  JobStatus status = 4;
+  int32 chunks_created = 5;
+  string error_message = 6;
+  common.v1.Timestamp created_at = 7;
+  common.v1.Timestamp updated_at = 8;
+}
+
+message ListJobsResponse {
+  bool success = 1;
+  repeated JobSummary jobs = 2;
+  common.v1.PaginationResponse pagination = 3;
+  common.v1.Error error = 4;
+}
+
+// --- CancelJob ---
+
+message CancelJobRequest {
+  string job_id = 1;
+  string user_id = 2; // Para validar ownership
+}
+
+message CancelJobResponse {
+  bool success = 1;
+  string message = 2;
+  common.v1.Error error = 3;
+}
+
+// --- ListCollections ---
+
+message ListCollectionsRequest {}
+
+message ListCollectionsResponse {
+  bool success = 1;
+  repeated CollectionInfo collections = 2;
+  common.v1.Error error = 3;
+}
+
+message CollectionInfo {
+  string name = 1;
+  int64 vectors_count = 2;
+  string category = 3;
+}
