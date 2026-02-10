@@ -52,7 +52,7 @@ enum JobStatus {
 message SubmitDocumentRequest {
   string user_id = 1;
   string filename = 2;
-  bytes content = 3; // Contenido del archivo
+  string file_path = 3; // Ruta al archivo subido por el Gateway (evita límite 4MB de gRPC)
   string mime_type = 4; // "application/pdf", "text/plain", etc.
   string topic = 5; // Tema académico (matemáticas, programación, etc.)
   map<string, string> metadata = 6; // Metadatos opcionales

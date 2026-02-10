@@ -134,82 +134,14 @@ class DatabaseManager:
     # ----------------------------------------------------------------
 
     async def init_schema(self) -> None:
-        """Crea las tablas del sistema si no existen."""
-        schema = """
-        -- Usuarios
-        CREATE TABLE IF NOT EXISTS users (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            email VARCHAR(255) UNIQUE NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            role VARCHAR(20) NOT NULL DEFAULT 'user',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
+        """Crea las tablas del sistema si no existen, leyendo el archivo SQL."""
+        from pathlib import Path
 
-        -- Sesiones (refresh tokens)
-        CREATE TABLE IF NOT EXISTS sessions (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            refresh_token VARCHAR(500) NOT NULL,
-            expires_at TIMESTAMPTZ NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            is_revoked BOOLEAN NOT NULL DEFAULT FALSE
-        );
-        CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-        CREATE INDEX IF NOT EXISTS idx_sessions_refresh_token ON sessions(refresh_token);
+        schema_path = Path(__file__).resolve().parent.parent.parent / "scripts" / "init_schema.sql"
+        if not schema_path.exists():
+            logger.warning(f"Schema SQL no encontrado en {schema_path}, saltando init_schema")
+            return
 
-        -- Conversaciones
-        CREATE TABLE IF NOT EXISTS conversations (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            title VARCHAR(500) NOT NULL DEFAULT 'Nueva conversación',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
-
-        -- Mensajes
-        CREATE TABLE IF NOT EXISTS messages (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-            role VARCHAR(20) NOT NULL,
-            content TEXT NOT NULL,
-            used_rag BOOLEAN NOT NULL DEFAULT FALSE,
-            sources TEXT[] DEFAULT '{}',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
-
-        -- Trabajos de indexación
-        CREATE TABLE IF NOT EXISTS indexing_jobs (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            filename VARCHAR(500) NOT NULL,
-            topic VARCHAR(255) NOT NULL,
-            mime_type VARCHAR(100),
-            status VARCHAR(20) NOT NULL DEFAULT 'pending',
-            chunks_created INTEGER NOT NULL DEFAULT 0,
-            error_message TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS idx_indexing_jobs_user_id ON indexing_jobs(user_id);
-        CREATE INDEX IF NOT EXISTS idx_indexing_jobs_status ON indexing_jobs(status);
-
-        -- Audit log
-        CREATE TABLE IF NOT EXISTS audit_log (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID,
-            action VARCHAR(100) NOT NULL,
-            service VARCHAR(50) NOT NULL,
-            detail JSONB,
-            ip_address VARCHAR(45),
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
-        CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
-        CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
-        """
-        await self.execute(schema)
+        schema_sql = schema_path.read_text(encoding="utf-8")
+        await self.execute(schema_sql)
         logger.info("Schema de base de datos inicializado")

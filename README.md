@@ -20,6 +20,9 @@ Toda la infraestructura se orquesta mediante **Docker Compose** (sin Dockerfiles
   - Orquestación de llamadas gRPC a microservicios
   - Gestión de CORS y rate limiting
   - SSE (Server-Sent Events) para streaming de respuestas del LLM
+  - Recepción de archivos vía `multipart/form-data` y guardado en `data/uploads/`
+    - El Gateway guarda el archivo a disco y envía solo la **ruta** al Indexing Service por gRPC
+    - Esto evita el límite de 4 MB por mensaje de gRPC
 
 #### 2. Auth Service (gRPC)
 - **Puerto**: 50051
@@ -50,9 +53,11 @@ Toda la infraestructura se orquesta mediante **Docker Compose** (sin Dockerfiles
 #### 5. Indexing Workers
 - **Responsabilidades**:
   - Consumo de trabajos desde Kafka
+  - Lectura de archivos desde `data/uploads/` (guardados por el Gateway)
   - Procesamiento de documentos (chunking, embeddings)
   - Almacenamiento de vectores en Qdrant
   - Actualización de estado de trabajos en PostgreSQL
+  - Limpieza del archivo temporal tras indexación exitosa
   - Procesamiento paralelo mediante múltiples workers
 
 #### 6. Audit Consumer
@@ -174,7 +179,8 @@ AgenticSystem/
 ├── data/                     # Datos persistentes (gitignored)
 │   ├── postgres/             # Datos de PostgreSQL
 │   ├── qdrant/              # Datos de Qdrant
-│   └── kafka/               # Logs de Kafka
+│   ├── kafka/               # Logs de Kafka
+│   └── uploads/             # Archivos subidos temporalmente (Gateway → Workers)
 │
 └── tests/                   # Tests
     ├── unit/
