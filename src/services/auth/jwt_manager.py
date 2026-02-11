@@ -49,6 +49,7 @@ class JWTManager:
             "email": email,
             "role": role,
             "type": "access",
+            "jti": generate_id(),
             "iat": now,
             "exp": expires,
         }

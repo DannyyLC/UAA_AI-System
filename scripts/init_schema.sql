@@ -106,7 +106,7 @@ INSERT INTO users (email, name, password_hash, role)
 VALUES (
     'admin@uaa.mx',
     'Administrador',
-    '$2b$12$LJ3m4ys3Lk0TSwHlvPJvLOhPBAMwEoC4u7xWCfQiYz8EHyBaGqHi',
+    '$2b$12$hTqmj.9x2Skj/L6hgY87mu8Xs1mwfCgGoIYnfFSKzqO.GVz7P5B.y',
     'admin'
 )
 ON CONFLICT (email) DO NOTHING;
