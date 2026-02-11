@@ -1,0 +1,1 @@
+"""Routes del API Gateway."""
