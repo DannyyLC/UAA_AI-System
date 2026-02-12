@@ -11,8 +11,9 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from src.gateway.middleware.cors import setup_cors
-from src.gateway.routes import auth, health
+from src.gateway.routes import auth, health, chat
 from src.gateway.grpc_clients.auth_client import auth_client
+from src.gateway.grpc_clients.chat_client import chat_client
 from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -38,6 +39,14 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error conectando a Auth Service: {e}")
         logger.warning("Gateway iniciando en modo degradado")
     
+    try:
+        # Conectar con Chat Service
+        await chat_client.connect()
+        logger.info("Conectado a Chat Service")
+    except Exception as e:
+        logger.error(f"Error conectando a Chat Service: {e}")
+        logger.warning("Chat Service no disponible")
+    
     logger.info("API Gateway listo")
     
     yield
@@ -47,6 +56,7 @@ async def lifespan(app: FastAPI):
     
     try:
         await auth_client.close()
+        await chat_client.close()
         logger.info("Conexiones gRPC cerradas")
     except Exception as e:
         logger.error(f"Error cerrando conexiones: {e}")
@@ -85,6 +95,7 @@ setup_cors(app)
 # Registrar routers
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
 
 
 # ============================================================

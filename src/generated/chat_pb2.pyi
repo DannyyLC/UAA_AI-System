@@ -189,3 +189,19 @@ class GetMessagesResponse(_message.Message):
     pagination: _common_pb2.PaginationResponse
     error: _common_pb2.Error
     def __init__(self, success: bool = ..., messages: _Optional[_Iterable[_Union[Message, _Mapping]]] = ..., pagination: _Optional[_Union[_common_pb2.PaginationResponse, _Mapping]] = ..., error: _Optional[_Union[_common_pb2.Error, _Mapping]] = ...) -> None: ...
+
+class GetUserTopicsRequest(_message.Message):
+    __slots__ = ("user_id",)
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    def __init__(self, user_id: _Optional[str] = ...) -> None: ...
+
+class GetUserTopicsResponse(_message.Message):
+    __slots__ = ("success", "topics", "error")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    TOPICS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    topics: _containers.RepeatedScalarFieldContainer[str]
+    error: _common_pb2.Error
+    def __init__(self, success: bool = ..., topics: _Optional[_Iterable[str]] = ..., error: _Optional[_Union[_common_pb2.Error, _Mapping]] = ...) -> None: ...

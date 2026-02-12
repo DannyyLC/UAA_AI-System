@@ -29,6 +29,9 @@ service ChatService {
 
   // Obtener mensajes de una conversación (paginado)
   rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+
+  // Obtener temas/filtros únicos disponibles para el usuario
+  rpc GetUserTopics(GetUserTopicsRequest) returns (GetUserTopicsResponse);
 }
 
 // --- Tipos de mensaje ---
@@ -154,4 +157,16 @@ message GetMessagesResponse {
   repeated Message messages = 2;
   common.v1.PaginationResponse pagination = 3;
   common.v1.Error error = 4;
+}
+
+// --- GetUserTopics ---
+
+message GetUserTopicsRequest {
+  string user_id = 1;
+}
+
+message GetUserTopicsResponse {
+  bool success = 1;
+  repeated string topics = 2; // Lista de temas únicos del usuario
+  common.v1.Error error = 3;
 }

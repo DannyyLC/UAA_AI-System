@@ -24,8 +24,10 @@ class Settings(BaseSettings):
     db_pool_max_size: int = Field(default=10, description="Conexiones máximas en el pool")
 
     # --- Qdrant ---
-    qdrant_url: str = Field(default="http://localhost:6333")
-    qdrant_grpc_port: int = Field(default=6334)
+    qdrant_host: str = Field(default="localhost", description="Host de Qdrant")
+    qdrant_port: int = Field(default=6333, description="Puerto REST de Qdrant")
+    qdrant_grpc_port: int = Field(default=6334, description="Puerto gRPC de Qdrant")
+    qdrant_collection_name: str = Field(default="documents", description="Nombre de la colección")
 
     # --- Kafka ---
     kafka_bootstrap_servers: str = Field(default="localhost:9092")
@@ -53,10 +55,13 @@ class Settings(BaseSettings):
 
     # --- Embeddings ---
     embedding_model: str = Field(
-        default="BAAI/bge-large-en-v1.5",
-        description="Modelo HuggingFace para embeddings",
+        default="text-embedding-3-small",
+        description="Modelo de embeddings (OpenAI)",
     )
-    embedding_dimension: int = Field(default=1024)
+    embedding_dimension: int = Field(
+        default=1536,
+        description="Dimensión de los vectores (1536 para text-embedding-3-small)"
+    )
 
     # --- General ---
     environment: str = Field(default="development")  # development | staging | production

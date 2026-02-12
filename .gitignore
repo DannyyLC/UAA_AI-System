@@ -166,3 +166,7 @@ uv.lock
 # Docker volumes and data directories
 data/
 chroma_db/
+
+# Scripts generated files
+logs/
+.pids/

@@ -69,6 +69,11 @@ class ChatServiceStub(object):
                 request_serializer=chat__pb2.GetMessagesRequest.SerializeToString,
                 response_deserializer=chat__pb2.GetMessagesResponse.FromString,
                 _registered_method=True)
+        self.GetUserTopics = channel.unary_unary(
+                '/chat.v1.ChatService/GetUserTopics',
+                request_serializer=chat__pb2.GetUserTopicsRequest.SerializeToString,
+                response_deserializer=chat__pb2.GetUserTopicsResponse.FromString,
+                _registered_method=True)
 
 
 class ChatServiceServicer(object):
@@ -121,6 +126,13 @@ class ChatServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetUserTopics(self, request, context):
+        """Obtener temas/filtros únicos disponibles para el usuario
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ChatServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -153,6 +165,11 @@ def add_ChatServiceServicer_to_server(servicer, server):
                     servicer.GetMessages,
                     request_deserializer=chat__pb2.GetMessagesRequest.FromString,
                     response_serializer=chat__pb2.GetMessagesResponse.SerializeToString,
+            ),
+            'GetUserTopics': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetUserTopics,
+                    request_deserializer=chat__pb2.GetUserTopicsRequest.FromString,
+                    response_serializer=chat__pb2.GetUserTopicsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -322,6 +339,33 @@ class ChatService(object):
             '/chat.v1.ChatService/GetMessages',
             chat__pb2.GetMessagesRequest.SerializeToString,
             chat__pb2.GetMessagesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetUserTopics(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/chat.v1.ChatService/GetUserTopics',
+            chat__pb2.GetUserTopicsRequest.SerializeToString,
+            chat__pb2.GetUserTopicsResponse.FromString,
             options,
             channel_credentials,
             insecure,
