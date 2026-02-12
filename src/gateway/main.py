@@ -83,8 +83,8 @@ app = FastAPI(
 setup_cors(app)
 
 # Registrar routers
-app.include_router(health.router)
-app.include_router(auth.router)
+app.include_router(health.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 
 
 # ============================================================

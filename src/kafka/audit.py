@@ -57,7 +57,7 @@ class AuditProducer:
 
         try:
             await self._producer.send(AUDIT_TOPIC, value=event, key=user_id)
-            logger.debug(f"Audit event enviado: {action}")
+            logger.info(f"📤 Audit event enviado: {action} (service={service}, user_id={user_id})")
         except Exception as e:
             # Nunca debe fallar el servicio principal por un error de auditoría
             logger.error(f"Error enviando audit event '{action}': {e}")
