@@ -28,14 +28,14 @@ check_service_status() {
         local pid=$(cat "$pid_file")
         
         if ps -p $pid > /dev/null 2>&1; then
-            echo -e "${GREEN}✅ $display_name${NC} - Corriendo (PID: $pid)"
+            echo -e "${GREEN}$display_name${NC} - Corriendo (PID: $pid)"
             return 0
         else
-            echo -e "${RED}❌ $display_name${NC} - Detenido (PID obsoleto: $pid)"
+            echo -e "${RED}$display_name${NC} - Detenido (PID obsoleto: $pid)"
             return 1
         fi
     else
-        echo -e "${RED}❌ $display_name${NC} - No iniciado"
+        echo -e "${RED}$display_name${NC} - No iniciado"
         return 1
     fi
 }
@@ -47,10 +47,10 @@ check_docker_service() {
     
     if docker compose ps "$name" 2>/dev/null | grep -q "Up"; then
         local port=$(docker compose ps "$name" | grep "$name" | awk '{print $NF}')
-        echo -e "${GREEN}✅ $display_name${NC} - Corriendo ($port)"
+        echo -e "${GREEN}$display_name${NC} - Corriendo ($port)"
         return 0
     else
-        echo -e "${RED}❌ $display_name${NC} - Detenido"
+        echo -e "${RED}$display_name${NC} - Detenido"
         return 1
     fi
 }
@@ -81,13 +81,13 @@ if curl -s http://localhost:8000/api/health > /dev/null 2>&1; then
     status=$(echo $response | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
     
     if [ "$status" == "healthy" ]; then
-        echo -e "${GREEN}✅ API Gateway${NC} - http://localhost:8000/api/health"
+        echo -e "${GREEN}API Gateway${NC} - http://localhost:8000/api/health"
         echo -e "   Swagger UI: http://localhost:8000/docs"
     else
-        echo -e "${YELLOW}⚠️  API Gateway${NC} - Respondiendo pero no healthy"
+        echo -e "${YELLOW}API Gateway${NC} - Respondiendo pero no healthy"
     fi
 else
-    echo -e "${RED}❌ API Gateway${NC} - No responde"
+    echo -e "${RED}API Gateway${NC} - No responde"
 fi
 
 echo -e "\n${BLUE}========================================${NC}\n"

@@ -29,13 +29,13 @@ stop_service() {
         local pid=$(cat "$pid_file")
         
         if ps -p $pid > /dev/null 2>&1; then
-            echo -e "${YELLOW}🛑 Deteniendo $name (PID: $pid)...${NC}"
+            echo -e "${YELLOW}Deteniendo $name (PID: $pid)...${NC}"
             kill $pid 2>/dev/null || true
             
             # Esperar a que el proceso termine
             for i in {1..10}; do
                 if ! ps -p $pid > /dev/null 2>&1; then
-                    echo -e "${GREEN}✅ $name detenido${NC}"
+                    echo -e "${GREEN}$name detenido${NC}"
                     rm "$pid_file"
                     return 0
                 fi
@@ -43,15 +43,15 @@ stop_service() {
             done
             
             # Si no se detuvo, forzar
-            echo -e "${RED}⚠️  Forzando cierre de $name...${NC}"
+            echo -e "${RED}Forzando cierre de $name...${NC}"
             kill -9 $pid 2>/dev/null || true
             rm "$pid_file"
         else
-            echo -e "${YELLOW}⚠️  $name no está corriendo (PID obsoleto: $pid)${NC}"
+            echo -e "${YELLOW}$name no está corriendo (PID obsoleto: $pid)${NC}"
             rm "$pid_file"
         fi
     else
-        echo -e "${YELLOW}⚠️  $name no tiene PID registrado${NC}"
+        echo -e "${YELLOW}$name no tiene PID registrado${NC}"
     fi
 }
 
@@ -77,7 +77,7 @@ if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
     echo -e "\n${BLUE}Deteniendo Docker Compose...${NC}"
     cd "$PROJECT_ROOT"
     docker compose stop
-    echo -e "${GREEN}✅ Docker Compose detenido${NC}"
+    echo -e "${GREEN}Docker Compose detenido${NC}"
 fi
 
 # Limpiar directorio de PIDs si está vacío
@@ -86,5 +86,5 @@ if [ -d "$PIDS_DIR" ] && [ -z "$(ls -A $PIDS_DIR)" ]; then
 fi
 
 echo -e "\n${BLUE}========================================${NC}"
-echo -e "${GREEN}✅ Servicios detenidos correctamente${NC}"
+echo -e "${GREEN}Servicios detenidos correctamente${NC}"
 echo -e "${BLUE}========================================${NC}\n"
