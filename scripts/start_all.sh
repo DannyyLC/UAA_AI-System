@@ -45,17 +45,17 @@ wait_for_service() {
     local max_wait=$2
     local check_cmd=$3
     
-    echo -e "${YELLOW}⏳ Esperando que $name esté listo...${NC}"
+    echo -e "${YELLOW}Esperando que $name esté listo...${NC}"
     
     for i in $(seq 1 $max_wait); do
         if eval "$check_cmd" > /dev/null 2>&1; then
-            echo -e "${GREEN}✅ $name está listo${NC}"
+            echo -e "${GREEN}$name está listo${NC}"
             return 0
         fi
         sleep 1
     done
     
-    echo -e "${RED}❌ Timeout esperando $name${NC}"
+    echo -e "${RED}Timeout esperando $name${NC}"
     return 1
 }
 
