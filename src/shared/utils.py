@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from google.protobuf.timestamp_pb2 import Timestamp as ProtoTimestamp
+from src.generated import common_pb2
 
 
 def generate_id() -> str:
@@ -17,16 +18,15 @@ def now_utc() -> datetime:
     """Retorna la fecha/hora actual en UTC."""
     return datetime.now(timezone.utc)
 
-def datetime_to_proto_timestamp(dt: datetime) -> dict:
+def datetime_to_proto_timestamp(dt: datetime) -> common_pb2.Timestamp:
     """
-    Convierte un datetime a los campos seconds/nanos
-    compatibles con common.v1.Timestamp del proto.
+    Convierte un datetime a common.v1.Timestamp del proto.
     """
     ts = dt.timestamp()
-    return {
-        "seconds": int(ts),
-        "nanos": int((ts % 1) * 1e9),
-    }
+    return common_pb2.Timestamp(
+        seconds=int(ts),
+        nanos=int((ts % 1) * 1e9)
+    )
 
 def proto_timestamp_to_datetime(seconds: int, nanos: int = 0) -> datetime:
     """

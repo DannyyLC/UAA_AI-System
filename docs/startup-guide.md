@@ -245,23 +245,25 @@ Abre en tu navegador:
 
 ```bash
 curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
   -d '{
-    "email": "estudiante@uaa.mx",
-    "password": "Password123",
-    "full_name": "Juan Pérez"
-  }'
+  "email": "daniell50@gmail.com",
+  "password": "contraseña123",
+  "full_name": "Daniel Limon"
+}'
 ```
 
 ### 2. Login (guarda la cookie)
 
 ```bash
 curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
   -d '{
-    "email": "estudiante@uaa.mx",
-    "password": "Password123"
-  }' \
+  "email": "daniell50@gmail.com",
+  "password": "contraseña123"
+}' \
   -c cookies.txt
 ```
 

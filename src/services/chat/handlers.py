@@ -92,8 +92,8 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             
             # Construir response
             conv_proto = chat_pb2.Conversation(
-                id=conversation["id"],
-                user_id=conversation["user_id"],
+                id=str(conversation["id"]),
+                user_id=str(conversation["user_id"]),
                 title=conversation["title"],
                 created_at=datetime_to_proto_timestamp(conversation["created_at"]),
                 updated_at=datetime_to_proto_timestamp(conversation["updated_at"])
@@ -146,8 +146,8 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             conv_list = []
             for conv in conversations:
                 conv_proto = chat_pb2.Conversation(
-                    id=conv["id"],
-                    user_id=conv["user_id"],
+                    id=str(conv["id"]),
+                    user_id=str(conv["user_id"]),
                     title=conv["title"],
                     created_at=datetime_to_proto_timestamp(conv["created_at"]),
                     updated_at=datetime_to_proto_timestamp(conv["updated_at"])
@@ -219,8 +219,8 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             
             # Construir response
             conv_proto = chat_pb2.Conversation(
-                id=conversation["id"],
-                user_id=conversation["user_id"],
+                id=str(conversation["id"]),
+                user_id=str(conversation["user_id"]),
                 title=conversation["title"],
                 created_at=datetime_to_proto_timestamp(conversation["created_at"]),
                 updated_at=datetime_to_proto_timestamp(conversation["updated_at"])
@@ -229,8 +229,8 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             messages_proto = []
             for msg in messages:
                 msg_proto = chat_pb2.Message(
-                    id=msg["id"],
-                    conversation_id=msg["conversation_id"],
+                    id=str(msg["id"]),
+                    conversation_id=str(msg["conversation_id"]),
                     role=self._string_to_message_role(msg["role"]),
                     content=msg["content"],
                     used_rag=msg["used_rag"],
@@ -526,7 +526,7 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             yield chat_pb2.SendMessageResponse(
                 chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_DONE,
                 message=chat_pb2.Message(
-                    id=assistant_message["id"],
+                    id=str(assistant_message["id"]),
                     conversation_id=request.conversation_id,
                     role=chat_pb2.MESSAGE_ROLE_ASSISTANT,
                     content=full_response,
@@ -591,8 +591,8 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             messages_proto = []
             for msg in messages:
                 msg_proto = chat_pb2.Message(
-                    id=msg["id"],
-                    conversation_id=msg["conversation_id"],
+                    id=str(msg["id"]),
+                    conversation_id=str(msg["conversation_id"]),
                     role=self._string_to_message_role(msg["role"]),
                     content=msg["content"],
                     used_rag=msg["used_rag"],

@@ -82,7 +82,7 @@ class ChatRepository:
         Returns:
             Lista de conversaciones
         """
-        rows = await self.db.fetchall(
+        rows = await self.db.fetch(
             """
             SELECT id, user_id, title, created_at, updated_at
             FROM conversations
@@ -265,7 +265,7 @@ class ChatRepository:
         Returns:
             Lista de mensajes
         """
-        rows = await self.db.fetchall(
+        rows = await self.db.fetch(
             """
             SELECT id, conversation_id, role, content, used_rag, sources, created_at
             FROM messages
@@ -312,7 +312,7 @@ class ChatRepository:
         Returns:
             Lista de mensajes en formato para LLM
         """
-        rows = await self.db.fetchall(
+        rows = await self.db.fetch(
             """
             SELECT id, role, content, created_at
             FROM messages
@@ -340,7 +340,7 @@ class ChatRepository:
         Returns:
             Lista de temas únicos (ordenados alfabéticamente)
         """
-        rows = await self.db.fetchall(
+        rows = await self.db.fetch(
             """
             SELECT DISTINCT topic
             FROM indexing_jobs

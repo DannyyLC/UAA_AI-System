@@ -44,13 +44,12 @@ def _user_to_proto(user: dict) -> common_pb2.User:
         "user": common_pb2.USER_ROLE_USER,
         "admin": common_pb2.USER_ROLE_ADMIN,
     }
-    ts = datetime_to_proto_timestamp(user["created_at"])
     return common_pb2.User(
         id=str(user["id"]),
         email=user["email"],
         name=user["name"],
         role=role_map.get(user["role"], common_pb2.USER_ROLE_USER),
-        created_at=common_pb2.Timestamp(**ts),
+        created_at=datetime_to_proto_timestamp(user["created_at"]),
     )
 
 
