@@ -73,3 +73,39 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+
+  # ============================================================
+  # Servicio de indexación
+  # ============================================================
+  indexing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: indexing
+    command: python -m src.services.indexing.main
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-rag_uaa}:${POSTGRES_PASSWORD:-rag_uaa_secret}@postgres:5432/${POSTGRES_DB:-rag_uaa}
+      # Qdrant
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      # Kafka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - KAFKA_INDEXING_QUEUE=indexing.queue
+      - KAFKA_INDEXING_DLQ=indexing.dlq
+      # Workers
+      - INDEXING_WORKERS=${INDEXING_WORKERS:-2}
+      # OpenAI
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
