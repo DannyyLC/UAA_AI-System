@@ -11,9 +11,10 @@ Ejecución:
 
 import asyncio
 import sys
+import time
+
 import grpc
 from grpc import aio as grpc_aio
-import time
 
 # Agregar path raíz para imports
 sys.path.insert(0, ".")
@@ -30,6 +31,7 @@ TEST_NAME = "Usuario de Prueba"
 
 class Colors:
     """ANSI colors para output legible."""
+
     GREEN = "\033[92m"
     RED = "\033[91m"
     YELLOW = "\033[93m"
@@ -360,7 +362,9 @@ async def run_tests():
                 ok(f"Rol: USER_ROLE_ADMIN = {response.user.role}")
                 passed += 1
             else:
-                fail(f"Admin login falló: {response.error.message if response.error else 'rol incorrecto'}")
+                fail(
+                    f"Admin login falló: {response.error.message if response.error else 'rol incorrecto'}"
+                )
                 failed += 1
         except grpc.RpcError as e:
             fail(f"gRPC error: {e.code()} — {e.details()}")

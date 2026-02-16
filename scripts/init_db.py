@@ -43,9 +43,7 @@ async def main():
         print(f"  • {t['tablename']}")
 
     # Verificar admin seed
-    admin = await db.fetchone(
-        "SELECT id, email, role FROM users WHERE role = 'admin' LIMIT 1"
-    )
+    admin = await db.fetchone("SELECT id, email, role FROM users WHERE role = 'admin' LIMIT 1")
     if admin:
         print(f"\n✓ Admin seed: {admin['email']} (id: {admin['id']})")
     else:

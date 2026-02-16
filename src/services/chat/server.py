@@ -20,14 +20,14 @@ import grpc
 from grpc import aio as grpc_aio
 
 from src.generated import chat_pb2_grpc
-from src.services.chat.handlers import ChatServiceHandler
+from src.kafka.audit import AuditProducer
 from src.services.chat.database import ChatRepository
+from src.services.chat.handlers import ChatServiceHandler
 from src.services.chat.litellm_client import LiteLLMClient
 from src.services.chat.rag.qdrant_client import QdrantManager
 from src.services.chat.rag.retrieval import RAGRetriever
-from src.kafka.audit import AuditProducer
-from src.shared.database import DatabaseManager
 from src.shared.configuration import settings
+from src.shared.database import DatabaseManager
 from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -53,10 +53,7 @@ async def serve() -> None:
 
     # --- Dependencias del servicio ---
     repo = ChatRepository(db)
-    llm_client = LiteLLMClient(
-        model=settings.llm_model,
-        temperature=0.7
-    )
+    llm_client = LiteLLMClient(model=settings.llm_model, temperature=0.7)
     rag_retriever = RAGRetriever(qdrant)
     audit = AuditProducer()
 

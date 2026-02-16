@@ -8,13 +8,14 @@ Tokens:
 Ambos firmados con HS256 y el mismo secret (configurable).
 """
 
-import jwt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import jwt
+
 from src.shared.configuration import settings
-from src.shared.utils import generate_id
 from src.shared.logging_utils import get_logger
+from src.shared.utils import generate_id
 
 logger = get_logger(__name__)
 
@@ -32,9 +33,7 @@ class JWTManager:
     # Creación de tokens
     # ----------------------------------------------------------------
 
-    def create_access_token(
-        self, user_id: str, email: str, role: str
-    ) -> tuple[str, int]:
+    def create_access_token(self, user_id: str, email: str, role: str) -> tuple[str, int]:
         """
         Crea un access token JWT.
 

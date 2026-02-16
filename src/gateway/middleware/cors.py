@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 def setup_cors(app):
     """
     Configura CORS para el API Gateway.
-    
+
     Args:
         app: Instancia de FastAPI
     """

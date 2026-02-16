@@ -8,8 +8,8 @@ tipado con Pydantic Settings para todos los servicios.
 from functools import lru_cache
 from typing import Optional
 
-from pydantic_settings import BaseSettings
 from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -59,8 +59,7 @@ class Settings(BaseSettings):
         description="Modelo de embeddings (OpenAI)",
     )
     embedding_dimension: int = Field(
-        default=1536,
-        description="Dimensión de los vectores (1536 para text-embedding-3-small)"
+        default=1536, description="Dimensión de los vectores (1536 para text-embedding-3-small)"
     )
 
     # --- General ---

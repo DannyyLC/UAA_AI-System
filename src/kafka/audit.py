@@ -8,8 +8,8 @@ Los eventos son consumidos por el Audit Consumer y persistidos en la tabla audit
 from typing import Any, Optional
 
 from src.kafka.producer import KafkaProducerManager
-from src.shared.utils import generate_id, now_utc
 from src.shared.logging_utils import get_logger
+from src.shared.utils import generate_id, now_utc
 
 logger = get_logger(__name__)
 

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from google.protobuf.timestamp_pb2 import Timestamp as ProtoTimestamp
+
 from src.generated import common_pb2
 
 
@@ -14,19 +15,19 @@ def generate_id() -> str:
     """Genera un UUID v4 como string."""
     return str(uuid.uuid4())
 
+
 def now_utc() -> datetime:
     """Retorna la fecha/hora actual en UTC."""
     return datetime.now(timezone.utc)
+
 
 def datetime_to_proto_timestamp(dt: datetime) -> common_pb2.Timestamp:
     """
     Convierte un datetime a common.v1.Timestamp del proto.
     """
     ts = dt.timestamp()
-    return common_pb2.Timestamp(
-        seconds=int(ts),
-        nanos=int((ts % 1) * 1e9)
-    )
+    return common_pb2.Timestamp(seconds=int(ts), nanos=int((ts % 1) * 1e9))
+
 
 def proto_timestamp_to_datetime(seconds: int, nanos: int = 0) -> datetime:
     """
@@ -34,6 +35,7 @@ def proto_timestamp_to_datetime(seconds: int, nanos: int = 0) -> datetime:
     """
     ts = seconds + nanos / 1e9
     return datetime.fromtimestamp(ts, tz=timezone.utc)
+
 
 def paginate(total: int, page: int, page_size: int) -> dict:
     """
@@ -49,6 +51,7 @@ def paginate(total: int, page: int, page_size: int) -> dict:
         "total": total,
         "total_pages": total_pages,
     }
+
 
 def sanitize_string(value: Optional[str], max_length: int = 500) -> str:
     """Limpia y trunca un string."""

@@ -14,11 +14,11 @@ import bcrypt
 import grpc
 
 from src.generated import auth_pb2, auth_pb2_grpc, common_pb2
-from src.services.auth.jwt_manager import JWTManager
-from src.services.auth.database import AuthRepository
 from src.kafka.audit import AuditProducer
-from src.shared.utils import datetime_to_proto_timestamp
+from src.services.auth.database import AuthRepository
+from src.services.auth.jwt_manager import JWTManager
 from src.shared.logging_utils import get_logger
+from src.shared.utils import datetime_to_proto_timestamp
 
 logger = get_logger(__name__)
 
@@ -82,9 +82,7 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
             if not request.email or not request.password or not request.name:
                 return auth_pb2.RegisterResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=400, message="Todos los campos son obligatorios"
-                    ),
+                    error=common_pb2.Error(code=400, message="Todos los campos son obligatorios"),
                 )
 
             if len(request.password) < 8:
@@ -100,23 +98,17 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
             if await self.repo.email_exists(request.email):
                 return auth_pb2.RegisterResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=409, message="El email ya está registrado"
-                    ),
+                    error=common_pb2.Error(code=409, message="El email ya está registrado"),
                 )
 
             # Crear usuario
             password_hash = _hash_password(request.password)
-            user = await self.repo.create_user(
-                request.email, request.name, password_hash
-            )
+            user = await self.repo.create_user(request.email, request.name, password_hash)
 
             if not user:
                 return auth_pb2.RegisterResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=500, message="Error interno al crear usuario"
-                    ),
+                    error=common_pb2.Error(code=500, message="Error interno al crear usuario"),
                 )
 
             # Evento de auditoría
@@ -149,18 +141,14 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
             if not user:
                 return auth_pb2.LoginResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=401, message="Credenciales inválidas"
-                    ),
+                    error=common_pb2.Error(code=401, message="Credenciales inválidas"),
                 )
 
             # Verificar contraseña
             if not _verify_password(request.password, user["password_hash"]):
                 return auth_pb2.LoginResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=401, message="Credenciales inválidas"
-                    ),
+                    error=common_pb2.Error(code=401, message="Credenciales inválidas"),
                 )
 
             # Generar tokens
@@ -205,9 +193,7 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
                 return auth_pb2.LogoutResponse(
                     success=False,
                     message="Token inválido",
-                    error=common_pb2.Error(
-                        code=401, message="Token inválido o expirado"
-                    ),
+                    error=common_pb2.Error(code=401, message="Token inválido o expirado"),
                 )
 
             user_id = payload["sub"]
@@ -243,9 +229,7 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
             if not payload:
                 return auth_pb2.ValidateTokenResponse(
                     valid=False,
-                    error=common_pb2.Error(
-                        code=401, message="Token inválido o expirado"
-                    ),
+                    error=common_pb2.Error(code=401, message="Token inválido o expirado"),
                 )
 
             # Verificar que el usuario sigue existiendo
@@ -253,9 +237,7 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
             if not user:
                 return auth_pb2.ValidateTokenResponse(
                     valid=False,
-                    error=common_pb2.Error(
-                        code=404, message="Usuario no encontrado"
-                    ),
+                    error=common_pb2.Error(code=404, message="Usuario no encontrado"),
                 )
 
             return auth_pb2.ValidateTokenResponse(
@@ -282,21 +264,15 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
             if not payload:
                 return auth_pb2.RefreshTokenResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=401, message="Refresh token inválido o expirado"
-                    ),
+                    error=common_pb2.Error(code=401, message="Refresh token inválido o expirado"),
                 )
 
             # Verificar que la sesión existe y no está revocada
-            session = await self.repo.get_session_by_refresh_token(
-                request.refresh_token
-            )
+            session = await self.repo.get_session_by_refresh_token(request.refresh_token)
             if not session:
                 return auth_pb2.RefreshTokenResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=401, message="Sesión no encontrada o revocada"
-                    ),
+                    error=common_pb2.Error(code=401, message="Sesión no encontrada o revocada"),
                 )
 
             # Revocar la sesión anterior (token rotation)
@@ -308,9 +284,7 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
             if not user:
                 return auth_pb2.RefreshTokenResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=404, message="Usuario no encontrado"
-                    ),
+                    error=common_pb2.Error(code=404, message="Usuario no encontrado"),
                 )
 
             # Generar nuevos tokens
@@ -349,18 +323,14 @@ class AuthServiceHandler(auth_pb2_grpc.AuthServiceServicer):
             if not request.user_id:
                 return auth_pb2.GetProfileResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=400, message="user_id es obligatorio"
-                    ),
+                    error=common_pb2.Error(code=400, message="user_id es obligatorio"),
                 )
 
             user = await self.repo.get_user_by_id(request.user_id)
             if not user:
                 return auth_pb2.GetProfileResponse(
                     success=False,
-                    error=common_pb2.Error(
-                        code=404, message="Usuario no encontrado"
-                    ),
+                    error=common_pb2.Error(code=404, message="Usuario no encontrado"),
                 )
 
             return auth_pb2.GetProfileResponse(

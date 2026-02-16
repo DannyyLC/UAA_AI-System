@@ -9,6 +9,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 from uuid import UUID
+
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -17,12 +18,14 @@ from pydantic import BaseModel, EmailStr, Field
 # ============================================================
 class UserRole(str, Enum):
     """Roles del sistema."""
+
     USER = "user"
     ADMIN = "admin"
 
 
 class MessageRole(str, Enum):
     """Roles de los mensajes en una conversación."""
+
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
@@ -31,6 +34,7 @@ class MessageRole(str, Enum):
 
 class JobStatus(str, Enum):
     """Estados de un trabajo de indexación."""
+
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -43,6 +47,7 @@ class JobStatus(str, Enum):
 # ============================================================
 class UserCreate(BaseModel):
     """Request para crear un usuario."""
+
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     name: str = Field(min_length=1, max_length=255)
@@ -50,12 +55,14 @@ class UserCreate(BaseModel):
 
 class UserLogin(BaseModel):
     """Request para login."""
+
     email: EmailStr
     password: str
 
 
 class UserResponse(BaseModel):
     """Representación pública de un usuario."""
+
     id: UUID
     email: str
     name: str
@@ -65,6 +72,7 @@ class UserResponse(BaseModel):
 
 class TokenResponse(BaseModel):
     """Respuesta de login/refresh con tokens."""
+
     user: UserResponse
     access_token: str
     refresh_token: str
@@ -76,11 +84,13 @@ class TokenResponse(BaseModel):
 # ============================================================
 class ConversationCreate(BaseModel):
     """Request para crear una conversación."""
+
     title: Optional[str] = None
 
 
 class ConversationResponse(BaseModel):
     """Representación de una conversación."""
+
     id: UUID
     user_id: UUID
     title: str
@@ -91,6 +101,7 @@ class ConversationResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     """Representación de un mensaje."""
+
     id: UUID
     conversation_id: UUID
     role: MessageRole
@@ -102,6 +113,7 @@ class MessageResponse(BaseModel):
 
 class SendMessageRequest(BaseModel):
     """Request para enviar un mensaje."""
+
     content: str = Field(min_length=1, max_length=10000)
 
 
@@ -110,12 +122,14 @@ class SendMessageRequest(BaseModel):
 # ============================================================
 class SubmitDocumentRequest(BaseModel):
     """Metadata para subir un documento (el archivo va como Form/File)."""
+
     topic: str = Field(min_length=1, max_length=255)
     metadata: Optional[dict[str, str]] = None
 
 
 class JobStatusResponse(BaseModel):
     """Estado de un trabajo de indexación."""
+
     job_id: UUID
     filename: str
     topic: str
@@ -128,6 +142,7 @@ class JobStatusResponse(BaseModel):
 
 class SourceInfo(BaseModel):
     """Información de un documento indexado."""
+
     source: str
     topic: str
     chunks_count: int
@@ -139,6 +154,7 @@ class SourceInfo(BaseModel):
 # ============================================================
 class SearchResultItem(BaseModel):
     """Un resultado de búsqueda semántica."""
+
     document_id: str
     chunk_id: str
     content: str
@@ -151,6 +167,7 @@ class SearchResultItem(BaseModel):
 
 class SearchResponse(BaseModel):
     """Respuesta de búsqueda RAG."""
+
     results: list[SearchResultItem]
     context: str
     total: int
@@ -161,12 +178,14 @@ class SearchResponse(BaseModel):
 # ============================================================
 class PaginationParams(BaseModel):
     """Parámetros de paginación para requests."""
+
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
 
 
 class PaginatedResponse(BaseModel):
     """Wrapper genérico para respuestas paginadas."""
+
     page: int
     page_size: int
     total: int
@@ -179,6 +198,7 @@ class PaginatedResponse(BaseModel):
 # ============================================================
 class ErrorResponse(BaseModel):
     """Respuesta de error estándar."""
+
     code: int
     message: str
     detail: Optional[str] = None

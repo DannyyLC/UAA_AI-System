@@ -23,9 +23,7 @@ class AuthRepository:
     # USERS
     # ================================================================
 
-    async def create_user(
-        self, email: str, name: str, password_hash: str
-    ) -> Optional[dict]:
+    async def create_user(self, email: str, name: str, password_hash: str) -> Optional[dict]:
         """Crea un usuario con rol 'user'. Retorna el registro creado."""
         row = await self.db.fetchone(
             """
@@ -89,9 +87,7 @@ class AuthRepository:
         )
         return dict(row) if row else None
 
-    async def get_session_by_refresh_token(
-        self, refresh_token: str
-    ) -> Optional[dict]:
+    async def get_session_by_refresh_token(self, refresh_token: str) -> Optional[dict]:
         """Busca una sesión activa (no revocada) por refresh token."""
         row = await self.db.fetchone(
             """

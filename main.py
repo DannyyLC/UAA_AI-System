@@ -1,29 +1,29 @@
 # app.py
 import asyncio
 import os
+import shutil
 import sqlite3
 import time
 from io import BytesIO
-from typing import Dict, Any, List, Optional
 from pathlib import Path
-import shutil
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from chromadb import PersistentClient
+from chromadb.config import Settings
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
+
+from src.api.APIManager import APIManager
 
 # ====== Imports de tu proyecto ======
 from src.indexing import EmbeddingProcessor
-from src.shared.logging_utils import get_logger
-from langchain_core.messages import HumanMessage
 from src.researcher.graph import build_graph
-from src.researcher.router import Router
-from src.researcher.retrieval import Retrieval
 from src.researcher.judge_graph import crear_sistema_refinamiento
-from src.api.APIManager import APIManager
-from chromadb import PersistentClient
-from chromadb.config import Settings
-
+from src.researcher.retrieval import Retrieval
+from src.researcher.router import Router
+from src.shared.logging_utils import get_logger
 
 # ====== Configuración base ======
 logger = get_logger(__name__)
@@ -38,11 +38,12 @@ DB_PATH = BASE_DIR / "query_results.db"
 # CORS (ajusta origins en producción)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # cámbialo a ["https://tu-dominio.com"] en prod
+    allow_origins=["*"],  # cámbialo a ["https://tu-dominio.com"] en prod
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
 )
+
 
 # ====== Modelos I/O de la API ======
 class QueryIn(BaseModel):
@@ -50,8 +51,10 @@ class QueryIn(BaseModel):
     answer: str
     especialidad: str
 
+
 class QueryOut(BaseModel):
     results: Dict[str, Any]
+
 
 # (Opcional) Respuesta del endpoint de indexación
 class IndexOut(BaseModel):
@@ -59,6 +62,7 @@ class IndexOut(BaseModel):
     collection: str
     filename: str
     user_id: str
+
 
 # ====== Funciones de base de datos ======
 def init_database():
@@ -83,7 +87,14 @@ def init_database():
     conn.commit()
     conn.close()
 
-def save_query_result(pregunta: str, respuesta: str, especialidad: str, results: Dict[str, Any], times: Dict[str, float]):
+
+def save_query_result(
+    pregunta: str,
+    respuesta: str,
+    especialidad: str,
+    results: Dict[str, Any],
+    times: Dict[str, float],
+):
     """Guarda el resultado de una consulta en la base de datos."""
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.cursor()
@@ -96,13 +107,27 @@ def save_query_result(pregunta: str, respuesta: str, especialidad: str, results:
     mistral_time = times.get("mistral:7b", 0.0)
     llama_time = times.get("llama3.1:8b", 0.0)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO query_results (pregunta, respuesta, especialidad, gemma, mistral, llama, gemma_time, mistral_time, llama_time)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (pregunta, respuesta, especialidad, gemma, mistral, llama, gemma_time, mistral_time, llama_time))
+    """,
+        (
+            pregunta,
+            respuesta,
+            especialidad,
+            gemma,
+            mistral,
+            llama,
+            gemma_time,
+            mistral_time,
+            llama_time,
+        ),
+    )
 
     conn.commit()
     conn.close()
+
 
 # ====== Helpers reutilizables ======
 async def run_graph_with_query(graph, state) -> Dict[str, Any]:
@@ -115,6 +140,7 @@ async def run_graph_with_query(graph, state) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error en run_graph_with_query: {str(e)}")
         raise
+
 
 async def process_query(graph, state):
     """
@@ -146,6 +172,7 @@ async def process_query(graph, state):
         logger.error(f"Error al procesar la consulta: {str(e)}")
         print(f"Error: {str(e)}")
 
+
 async def index_documents(embedding_processor: EmbeddingProcessor):
     """
     Indexación por consola (con input()).
@@ -154,7 +181,7 @@ async def index_documents(embedding_processor: EmbeddingProcessor):
     pdf_path = input("Dame el nombre del archivo: ")
     collection = input("Dame el nombre de la coleccion: ")
 
-    with open(pdf_path, 'rb') as pdf_file:
+    with open(pdf_path, "rb") as pdf_file:
         pdf_content = pdf_file.read()
 
     pdf_bytes = BytesIO(pdf_content)
@@ -162,12 +189,11 @@ async def index_documents(embedding_processor: EmbeddingProcessor):
     documents = [(pdf_bytes, pdf_name)]
 
     collection_name = await embedding_processor.process_and_store(
-        documents=documents,
-        user_id="usuario_123",
-        collection_name=collection
+        documents=documents, user_id="usuario_123", collection_name=collection
     )
 
     print(f"Embeddings almacenados en la colección: {collection_name}")
+
 
 async def process_query_multiple_models(query: str) -> tuple[Dict[str, Any], Dict[str, float]]:
     """
@@ -203,7 +229,7 @@ async def process_query_multiple_models(query: str) -> tuple[Dict[str, Any], Dic
             "router_obj": Router(model_name=model),
             "judge_obj": judge_graph,
             "response_model": model,
-            "api": APIManager(USE_API, model)
+            "api": APIManager(USE_API, model),
         }
 
         state["router_obj"].retriever = state["retrieval_obj"]
@@ -233,10 +259,12 @@ async def process_query_multiple_models(query: str) -> tuple[Dict[str, Any], Dic
 
     return response, execution_times
 
+
 # ====== Endpoints de la API ======
 @app.get("/health", tags=["system"])
 def health():
     return {"status": "ok"}
+
 
 @app.post("/query", response_model=QueryOut, tags=["query"])
 async def query_endpoint(payload: QueryIn):
@@ -266,11 +294,14 @@ async def query_endpoint(payload: QueryIn):
         logger.error(f"Error en /query: {e}")
         raise HTTPException(status_code=500, detail="Error procesando la consulta")
 
+
 @app.post("/reiniciar")
 def reiniciar_chroma():
     try:
-        import os, shutil
+        import os
+        import shutil
         from uuid import UUID
+
         from chromadb import PersistentClient
 
         # 0) Soltar referencias vivas para evitar locks
@@ -324,8 +355,7 @@ def reiniciar_chroma():
 
         # 5) Re-inicializar el EmbeddingProcessor apuntando a la RUTA ABSOLUTA
         app.state.embedding_processor = EmbeddingProcessor(
-            api=USE_API,
-            persist_directory=str(CHROMA_DIR)
+            api=USE_API, persist_directory=str(CHROMA_DIR)
         )
 
         return {
@@ -336,6 +366,7 @@ def reiniciar_chroma():
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"No se pudo reiniciar chroma_db: {e}")
+
 
 @app.post("/index", response_model=IndexOut, tags=["documents"])
 async def index_endpoint(
@@ -361,16 +392,16 @@ async def index_endpoint(
         # Usamos el EmbeddingProcessor inicializado en startup
         if not hasattr(app.state, "embedding_processor"):
             # Fallback por si startup no corrió (no debería suceder)
-            logger.warning("embedding_processor no inicializado en app.state; creando uno temporal.")
+            logger.warning(
+                "embedding_processor no inicializado en app.state; creando uno temporal."
+            )
             embedding_processor = EmbeddingProcessor(True, persist_directory="./chroma_db")
         else:
             embedding_processor = app.state.embedding_processor
 
         # Procesar e indexar
         collection_name = await embedding_processor.process_and_store(
-            documents=[(file_bytes, file.filename)],
-            user_id=user_id,
-            collection_name=collection
+            documents=[(file_bytes, file.filename)], user_id=user_id, collection_name=collection
         )
 
         return IndexOut(
@@ -384,6 +415,7 @@ async def index_endpoint(
     except Exception as e:
         logger.error(f"Error en /index: {e}")
         raise HTTPException(status_code=500, detail=f"Error indexando el documento: {e}")
+
 
 @app.get("/resultados", tags=["query"])
 def obtener_resultados():
@@ -408,14 +440,13 @@ def obtener_resultados():
         # Convertir a lista de diccionarios
         resultados = [dict(row) for row in rows]
 
-        return {
-            "status": "ok",
-            "total": len(resultados),
-            "resultados": resultados
-        }
+        return {"status": "ok", "total": len(resultados), "resultados": resultados}
     except Exception as e:
         logger.error(f"Error obteniendo resultados: {e}")
-        raise HTTPException(status_code=500, detail="Error obteniendo resultados de la base de datos")
+        raise HTTPException(
+            status_code=500, detail="Error obteniendo resultados de la base de datos"
+        )
+
 
 # ====== Inicialización de recursos pesados ======
 @app.on_event("startup")
@@ -428,7 +459,7 @@ async def on_startup():
     try:
         app.state.embedding_processor = EmbeddingProcessor(
             USE_API,  # usa API si tu EmbeddingProcessor lo interpreta así
-            persist_directory="./chroma_db"
+            persist_directory="./chroma_db",
         )
         logger.info("EmbeddingProcessor inicializado en startup.")
 
@@ -438,6 +469,7 @@ async def on_startup():
     except Exception as e:
         logger.error(f"Fallo inicializando recursos: {e}")
         # No hacemos raise para permitir levantar el servidor; /index hará fallback.
+
 
 # ====== Bloque CLI original (comentado para conservarlo) ======
 """

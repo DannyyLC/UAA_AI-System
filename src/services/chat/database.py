@@ -4,7 +4,8 @@ Chat Repository — Queries de base de datos para gestión de conversaciones y m
 Todas las operaciones usan el DatabaseManager compartido (asyncpg pool).
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from src.shared.database import DatabaseManager
 from src.shared.logging_utils import get_logger
 
@@ -26,11 +27,11 @@ class ChatRepository:
     ) -> Optional[Dict[str, Any]]:
         """
         Crea una nueva conversación para un usuario.
-        
+
         Args:
             user_id: ID del usuario
             title: Título de la conversación
-            
+
         Returns:
             Registro de la conversación creada
         """
@@ -48,10 +49,10 @@ class ChatRepository:
     async def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene una conversación por ID.
-        
+
         Args:
             conversation_id: ID de la conversación
-            
+
         Returns:
             Registro de la conversación
         """
@@ -66,19 +67,16 @@ class ChatRepository:
         return dict(row) if row else None
 
     async def list_conversations(
-        self,
-        user_id: str,
-        limit: int = 50,
-        offset: int = 0
+        self, user_id: str, limit: int = 50, offset: int = 0
     ) -> List[Dict[str, Any]]:
         """
         Lista las conversaciones de un usuario (ordenadas por más reciente).
-        
+
         Args:
             user_id: ID del usuario
             limit: Número máximo de conversaciones
             offset: Offset para paginación
-            
+
         Returns:
             Lista de conversaciones
         """
@@ -99,10 +97,10 @@ class ChatRepository:
     async def count_conversations(self, user_id: str) -> int:
         """
         Cuenta el total de conversaciones de un usuario.
-        
+
         Args:
             user_id: ID del usuario
-            
+
         Returns:
             Número total de conversaciones
         """
@@ -121,11 +119,11 @@ class ChatRepository:
     ) -> Optional[Dict[str, Any]]:
         """
         Actualiza el título de una conversación.
-        
+
         Args:
             conversation_id: ID de la conversación
             title: Nuevo título
-            
+
         Returns:
             Registro actualizado
         """
@@ -145,7 +143,7 @@ class ChatRepository:
         """
         Actualiza el timestamp de última modificación de una conversación.
         Se llama cada vez que se agrega un mensaje.
-        
+
         Args:
             conversation_id: ID de la conversación
         """
@@ -161,10 +159,10 @@ class ChatRepository:
     async def delete_conversation(self, conversation_id: str) -> bool:
         """
         Elimina una conversación y todos sus mensajes (CASCADE).
-        
+
         Args:
             conversation_id: ID de la conversación
-            
+
         Returns:
             True si se eliminó, False si no existía
         """
@@ -178,16 +176,14 @@ class ChatRepository:
         # asyncpg retorna el número de filas afectadas como string "DELETE N"
         return result != "DELETE 0"
 
-    async def conversation_belongs_to_user(
-        self, conversation_id: str, user_id: str
-    ) -> bool:
+    async def conversation_belongs_to_user(self, conversation_id: str, user_id: str) -> bool:
         """
         Verifica que una conversación pertenezca a un usuario.
-        
+
         Args:
             conversation_id: ID de la conversación
             user_id: ID del usuario
-            
+
         Returns:
             True si la conversación pertenece al usuario
         """
@@ -212,24 +208,24 @@ class ChatRepository:
         role: str,
         content: str,
         used_rag: bool = False,
-        sources: List[str] = None
+        sources: List[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Crea un nuevo mensaje en una conversación.
-        
+
         Args:
             conversation_id: ID de la conversación
             role: Rol del mensaje ('user', 'assistant', 'system', 'tool')
             content: Contenido del mensaje
             used_rag: Si se usó RAG para generar este mensaje
             sources: Lista de fuentes consultadas (si used_rag=True)
-            
+
         Returns:
             Registro del mensaje creado
         """
         if sources is None:
             sources = []
-        
+
         row = await self.db.fetchone(
             """
             INSERT INTO messages (conversation_id, role, content, used_rag, sources)
@@ -242,26 +238,23 @@ class ChatRepository:
             used_rag,
             sources,
         )
-        
+
         # Actualizar timestamp de la conversación
         await self.update_conversation_timestamp(conversation_id)
-        
+
         return dict(row) if row else None
 
     async def get_messages(
-        self,
-        conversation_id: str,
-        limit: int = 100,
-        offset: int = 0
+        self, conversation_id: str, limit: int = 100, offset: int = 0
     ) -> List[Dict[str, Any]]:
         """
         Obtiene los mensajes de una conversación (ordenados cronológicamente).
-        
+
         Args:
             conversation_id: ID de la conversación
             limit: Número máximo de mensajes
             offset: Offset para paginación
-            
+
         Returns:
             Lista de mensajes
         """
@@ -282,10 +275,10 @@ class ChatRepository:
     async def count_messages(self, conversation_id: str) -> int:
         """
         Cuenta el total de mensajes en una conversación.
-        
+
         Args:
             conversation_id: ID de la conversación
-            
+
         Returns:
             Número total de mensajes
         """
@@ -304,11 +297,11 @@ class ChatRepository:
     ) -> List[Dict[str, Any]]:
         """
         Obtiene el historial reciente de mensajes para contexto del LLM.
-        
+
         Args:
             conversation_id: ID de la conversación
             limit: Número máximo de mensajes recientes
-            
+
         Returns:
             Lista de mensajes en formato para LLM
         """
@@ -333,10 +326,10 @@ class ChatRepository:
     async def get_user_topics(self, user_id: str) -> List[str]:
         """
         Obtiene los temas únicos de documentos indexados por un usuario.
-        
+
         Args:
             user_id: ID del usuario
-            
+
         Returns:
             Lista de temas únicos (ordenados alfabéticamente)
         """

@@ -10,8 +10,8 @@ Uso:
 import logging
 import sys
 from typing import Optional
-from src.shared.configuration import settings
 
+from src.shared.configuration import settings
 
 # Formato con color para desarrollo
 COLORED_FORMAT = (

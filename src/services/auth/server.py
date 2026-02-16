@@ -15,13 +15,13 @@ import grpc
 from grpc import aio as grpc_aio
 
 from src.generated import auth_pb2_grpc
+from src.kafka.audit import AuditProducer
+from src.kafka.producer import KafkaProducerManager
+from src.services.auth.database import AuthRepository
 from src.services.auth.handlers import AuthServiceHandler
 from src.services.auth.jwt_manager import JWTManager
-from src.services.auth.database import AuthRepository
-from src.kafka.producer import KafkaProducerManager
-from src.kafka.audit import AuditProducer
-from src.shared.database import DatabaseManager
 from src.shared.configuration import settings
+from src.shared.database import DatabaseManager
 from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)

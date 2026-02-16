@@ -2,28 +2,30 @@
 Routes de gestión de documentos e indexación.
 """
 
+import mimetypes
 import os
 import uuid
-import mimetypes
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated, Optional
+
 from fastapi import (
     APIRouter,
-    HTTPException,
-    status,
     Depends,
-    UploadFile,
     File,
     Form,
+    HTTPException,
     Query,
+    UploadFile,
+    status,
 )
-from src.gateway.models import (
-    UserResponse,
-    ErrorResponse,
-)
+
 from src.gateway.dependencies import get_current_user
 from src.gateway.kafka_producer import indexing_producer
+from src.gateway.models import (
+    ErrorResponse,
+    UserResponse,
+)
 from src.services.indexing.database import IndexingRepository, JobStatus
 from src.shared.database import DatabaseManager
 from src.shared.logging_utils import get_logger
@@ -75,10 +77,10 @@ async def upload_document(
 ):
     """
     Sube un documento para indexación.
-    
+
     - **file**: Archivo (PDF, TXT, MD, DOCX)
     - **topic**: Tema académico (ej: matematicas, programacion, fisica)
-    
+
     El documento se guarda en disco y se encola en Kafka para procesamiento asíncrono.
     Retorna el job_id para consultar el estado posteriormente.
     """
@@ -89,7 +91,7 @@ async def upload_document(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No se proporcionó ningún archivo",
             )
-        
+
         # Validar extensión
         file_ext = Path(file.filename).suffix.lower()
         if file_ext not in ALLOWED_EXTENSIONS:
@@ -97,7 +99,7 @@ async def upload_document(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Extensión no permitida. Permitidas: {', '.join(ALLOWED_EXTENSIONS)}",
             )
-        
+
         # Validar MIME type
         mime_type = file.content_type or mimetypes.guess_type(file.filename)[0]
         if mime_type not in ALLOWED_MIME_TYPES:
@@ -105,31 +107,29 @@ async def upload_document(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Tipo de archivo no permitido. Permitidos: PDF, TXT, MD, DOCX",
             )
-        
+
         # Generar job_id único
         job_id = str(uuid.uuid4())
-        
+
         # Crear directorio para el usuario
         user_dir = UPLOADS_DIR / current_user.id / job_id
         user_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Sanitizar nombre de archivo
-        safe_filename = "".join(
-            c for c in file.filename if c.isalnum() or c in "._- "
-        ).rstrip()
+        safe_filename = "".join(c for c in file.filename if c.isalnum() or c in "._- ").rstrip()
         if not safe_filename:
             safe_filename = f"document{file_ext}"
-        
+
         # Guardar archivo en disco
         file_path = user_dir / safe_filename
-        
+
         # Leer y guardar por chunks para evitar consumir mucha memoria
         file_size = 0
         try:
             with open(file_path, "wb") as f:
                 while chunk := await file.read(8192):  # 8 KB chunks
                     file_size += len(chunk)
-                    
+
                     # Validar tamaño máximo
                     if file_size > MAX_FILE_SIZE:
                         # Eliminar archivo parcial
@@ -138,9 +138,9 @@ async def upload_document(
                             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                             detail=f"Archivo muy grande. Máximo: {MAX_FILE_SIZE // 1024 // 1024} MB",
                         )
-                    
+
                     f.write(chunk)
-        
+
         except HTTPException:
             raise
         except Exception as e:
@@ -151,11 +151,11 @@ async def upload_document(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error guardando el archivo",
             )
-        
+
         logger.info(
             f"Archivo guardado: {file_path} ({file_size} bytes) para user {current_user.id}"
         )
-        
+
         # Crear registro en base de datos
         job = await repo.create_job(
             job_id=job_id,
@@ -165,7 +165,7 @@ async def upload_document(
             mime_type=mime_type,
             file_size=file_size,
         )
-        
+
         if not job:
             # Limpiar archivo si falla la creación del job
             file_path.unlink()
@@ -173,7 +173,7 @@ async def upload_document(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error creando el trabajo de indexación",
             )
-        
+
         # Publicar en Kafka
         published = await indexing_producer.publish_indexing_job(
             job_id=job_id,
@@ -188,7 +188,7 @@ async def upload_document(
                 "user_email": current_user.email,
             },
         )
-        
+
         if not published:
             logger.error(f"Error publicando job {job_id} en Kafka")
             # No eliminamos el archivo ni el registro, se puede reintentar
@@ -196,9 +196,9 @@ async def upload_document(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Error encolando el documento. Intente nuevamente.",
             )
-        
+
         logger.info(f"Job {job_id} encolado exitosamente para user {current_user.id}")
-        
+
         return {
             "job_id": job_id,
             "filename": safe_filename,
@@ -206,7 +206,7 @@ async def upload_document(
             "status": JobStatus.PENDING,
             "message": "Documento aceptado. El procesamiento comenzará pronto.",
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -234,27 +234,27 @@ async def get_job_status(
 ):
     """
     Consulta el estado de un trabajo de indexación.
-    
+
     - **job_id**: ID del trabajo retornado al subir el documento
-    
+
     Retorna: status, progreso, chunks creados, errores (si los hay)
     """
     try:
         job = await repo.get_job(job_id)
-        
+
         if not job:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Trabajo no encontrado",
             )
-        
+
         # Verificar que el job pertenece al usuario actual
         if job["user_id"] != uuid.UUID(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Trabajo no encontrado",
             )
-        
+
         return {
             "job_id": str(job["id"]),
             "filename": job["filename"],
@@ -265,7 +265,7 @@ async def get_job_status(
             "created_at": job["created_at"].isoformat(),
             "updated_at": job["updated_at"].isoformat(),
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -286,12 +286,8 @@ async def get_job_status(
     description="Lista los trabajos de indexación del usuario con filtros opcionales",
 )
 async def list_jobs(
-    status_filter: Optional[str] = Query(
-        None, alias="status", description="Filtrar por estado"
-    ),
-    topic_filter: Optional[str] = Query(
-        None, alias="topic", description="Filtrar por tema"
-    ),
+    status_filter: Optional[str] = Query(None, alias="status", description="Filtrar por estado"),
+    topic_filter: Optional[str] = Query(None, alias="topic", description="Filtrar por tema"),
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(20, ge=1, le=100, description="Tamaño de página"),
     current_user: UserResponse = Depends(get_current_user),
@@ -299,18 +295,18 @@ async def list_jobs(
 ):
     """
     Lista los trabajos de indexación del usuario.
-    
+
     Filtros opcionales:
     - **status**: pending, processing, completed, failed, cancelled
     - **topic**: tema académico
-    
+
     Paginación:
     - **page**: número de página (default: 1)
     - **page_size**: elementos por página (default: 20, max: 100)
     """
     try:
         offset = (page - 1) * page_size
-        
+
         jobs = await repo.list_jobs(
             user_id=current_user.id,
             status=status_filter,
@@ -318,15 +314,15 @@ async def list_jobs(
             limit=page_size,
             offset=offset,
         )
-        
+
         total = await repo.count_jobs(
             user_id=current_user.id,
             status=status_filter,
             topic=topic_filter,
         )
-        
+
         total_pages = (total + page_size - 1) // page_size
-        
+
         return {
             "jobs": [
                 {
@@ -348,7 +344,7 @@ async def list_jobs(
                 "total_pages": total_pages,
             },
         }
-    
+
     except Exception as e:
         logger.error(f"Error listando jobs: {e}", exc_info=True)
         raise HTTPException(
@@ -375,49 +371,49 @@ async def cancel_job(
 ):
     """
     Cancela un trabajo de indexación.
-    
+
     Solo se pueden cancelar trabajos en estado PENDING o PROCESSING.
     """
     try:
         job = await repo.get_job(job_id)
-        
+
         if not job:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Trabajo no encontrado",
             )
-        
+
         # Verificar pertenencia
         if job["user_id"] != uuid.UUID(current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Trabajo no encontrado",
             )
-        
+
         # Verificar que se puede cancelar
         if job["status"] not in [JobStatus.PENDING, JobStatus.PROCESSING]:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"No se puede cancelar un trabajo en estado {job['status']}",
             )
-        
+
         # Cancelar
         success = await repo.mark_cancelled(job_id)
-        
+
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error cancelando el trabajo",
             )
-        
+
         logger.info(f"Job {job_id} cancelado por user {current_user.id}")
-        
+
         return {
             "job_id": job_id,
             "status": JobStatus.CANCELLED,
             "message": "Trabajo cancelado exitosamente",
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -444,7 +440,7 @@ async def list_sources(
 ):
     """
     Lista documentos completamente indexados.
-    
+
     Opcionalmente filtrado por tema académico.
     """
     try:
@@ -452,26 +448,28 @@ async def list_sources(
             user_id=current_user.id,
             topic=topic,
         )
-        
+
         # Agrupar por tema
         by_topic = {}
         for source in sources:
             topic_key = source["topic"]
             if topic_key not in by_topic:
                 by_topic[topic_key] = []
-            by_topic[topic_key].append({
-                "job_id": str(source["id"]),
-                "filename": source["filename"],
-                "chunks": source["chunks_created"],
-                "indexed_at": source["updated_at"].isoformat(),
-            })
-        
+            by_topic[topic_key].append(
+                {
+                    "job_id": str(source["id"]),
+                    "filename": source["filename"],
+                    "chunks": source["chunks_created"],
+                    "indexed_at": source["updated_at"].isoformat(),
+                }
+            )
+
         return {
             "topics": list(by_topic.keys()),
             "sources": by_topic,
             "total": len(sources),
         }
-    
+
     except Exception as e:
         logger.error(f"Error listando sources: {e}", exc_info=True)
         raise HTTPException(
@@ -495,12 +493,12 @@ async def get_stats(
 ):
     """
     Obtiene estadísticas de indexación del usuario.
-    
+
     Retorna contadores por estado y totales.
     """
     try:
         stats = await repo.get_stats(current_user.id)
-        
+
         return {
             "pending": stats.get("pending", 0),
             "processing": stats.get("processing", 0),
@@ -510,7 +508,7 @@ async def get_stats(
             "total_jobs": stats.get("total", 0),
             "total_chunks": stats.get("total_chunks", 0),
         }
-    
+
     except Exception as e:
         logger.error(f"Error obteniendo stats: {e}", exc_info=True)
         raise HTTPException(

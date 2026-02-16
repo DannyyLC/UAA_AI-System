@@ -6,15 +6,17 @@ Gateway REST que orquesta las llamadas a los microservicios gRPC.
 
 import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from src.gateway.middleware.cors import setup_cors
-from src.gateway.routes import auth, health, chat, documents
+
 from src.gateway.grpc_clients.auth_client import auth_client
 from src.gateway.grpc_clients.chat_client import chat_client
 from src.gateway.kafka_producer import indexing_producer
+from src.gateway.middleware.cors import setup_cors
+from src.gateway.routes import auth, chat, documents, health
 from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -24,14 +26,14 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """
     Context manager para el ciclo de vida de la aplicación.
-    
+
     Maneja la inicialización y limpieza de recursos:
     - Conexión con servicios gRPC
     - Limpieza al cerrar
     """
     # Startup
     logger.info("Iniciando API Gateway...")
-    
+
     try:
         # Conectar con Auth Service
         await auth_client.connect()
@@ -39,7 +41,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error conectando a Auth Service: {e}")
         logger.warning("Gateway iniciando en modo degradado")
-    
+
     try:
         # Conectar con Chat Service
         await chat_client.connect()
@@ -47,7 +49,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error conectando a Chat Service: {e}")
         logger.warning("Chat Service no disponible")
-    
+
     try:
         # Conectar Kafka Producer
         await indexing_producer.connect()
@@ -55,14 +57,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error conectando Kafka Producer: {e}")
         logger.warning("Indexación no disponible")
-    
+
     logger.info("API Gateway listo")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Cerrando API Gateway...")
-    
+
     try:
         await auth_client.close()
         await chat_client.close()
@@ -70,7 +72,7 @@ async def lifespan(app: FastAPI):
         logger.info("Conexiones gRPC y Kafka cerradas")
     except Exception as e:
         logger.error(f"Error cerrando conexiones: {e}")
-    
+
     logger.info("API Gateway cerrado")
 
 
@@ -96,7 +98,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
 )
 
 # Configurar CORS
@@ -113,16 +115,13 @@ app.include_router(documents.router, prefix="/api")
 # Exception Handlers
 # ============================================================
 
+
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
     """Handler para excepciones HTTP."""
     return JSONResponse(
         status_code=exc.status_code,
-        content={
-            "error": "HTTP_ERROR",
-            "message": str(exc.detail),
-            "status_code": exc.status_code
-        }
+        content={"error": "HTTP_ERROR", "message": str(exc.detail), "status_code": exc.status_code},
     )
 
 
@@ -134,8 +133,8 @@ async def validation_exception_handler(request, exc):
         content={
             "error": "VALIDATION_ERROR",
             "message": "Datos de entrada inválidos",
-            "detail": exc.errors()
-        }
+            "detail": exc.errors(),
+        },
     )
 
 
@@ -148,8 +147,8 @@ async def general_exception_handler(request, exc):
         content={
             "error": "INTERNAL_SERVER_ERROR",
             "message": "Error interno del servidor",
-            "detail": str(exc) if os.getenv("DEBUG", "false").lower() == "true" else None
-        }
+            "detail": str(exc) if os.getenv("DEBUG", "false").lower() == "true" else None,
+        },
     )
 
 
@@ -159,17 +158,11 @@ async def general_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     port = int(os.getenv("GATEWAY_PORT", "8000"))
     host = os.getenv("GATEWAY_HOST", "0.0.0.0")
     reload = os.getenv("DEBUG", "false").lower() == "true"
-    
+
     logger.info(f"Iniciando servidor en {host}:{port}")
-    
-    uvicorn.run(
-        "src.gateway.main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        log_level="info"
-    )
+
+    uvicorn.run("src.gateway.main:app", host=host, port=port, reload=reload, log_level="info")

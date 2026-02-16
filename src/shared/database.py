@@ -5,8 +5,10 @@ Usa asyncpg para conexiones asíncronas con pool.
 Provee un DatabaseManager singleton para uso compartido entre servicios.
 """
 
-import asyncpg
 from typing import Any, Optional
+
+import asyncpg
+
 from src.shared.configuration import settings
 from src.shared.logging_utils import get_logger
 
@@ -64,9 +66,7 @@ class DatabaseManager:
     def pool(self) -> asyncpg.Pool:
         """Retorna el pool, lanzando error si no está conectado."""
         if self._pool is None:
-            raise RuntimeError(
-                "DatabaseManager no conectado. Llama a connect() primero."
-            )
+            raise RuntimeError("DatabaseManager no conectado. Llama a connect() primero.")
         return self._pool
 
     # ----------------------------------------------------------------
