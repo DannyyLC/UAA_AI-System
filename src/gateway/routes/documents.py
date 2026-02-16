@@ -112,7 +112,7 @@ async def upload_document(
         job_id = str(uuid.uuid4())
 
         # Crear directorio para el usuario
-        user_dir = UPLOADS_DIR / current_user.id / job_id
+        user_dir = UPLOADS_DIR / current_user.user_id / job_id
         user_dir.mkdir(parents=True, exist_ok=True)
 
         # Sanitizar nombre de archivo
@@ -153,13 +153,13 @@ async def upload_document(
             )
 
         logger.info(
-            f"Archivo guardado: {file_path} ({file_size} bytes) para user {current_user.id}"
+            f"Archivo guardado: {file_path} ({file_size} bytes) para user {current_user.user_id}"
         )
 
         # Crear registro en base de datos
         job = await repo.create_job(
             job_id=job_id,
-            user_id=current_user.id,
+            user_id=current_user.user_id,
             filename=safe_filename,
             topic=topic,
             mime_type=mime_type,
@@ -177,7 +177,7 @@ async def upload_document(
         # Publicar en Kafka
         published = await indexing_producer.publish_indexing_job(
             job_id=job_id,
-            user_id=current_user.id,
+            user_id=current_user.user_id,
             file_path=str(file_path),
             filename=safe_filename,
             mime_type=mime_type,
@@ -197,7 +197,7 @@ async def upload_document(
                 detail="Error encolando el documento. Intente nuevamente.",
             )
 
-        logger.info(f"Job {job_id} encolado exitosamente para user {current_user.id}")
+        logger.info(f"Job {job_id} encolado exitosamente para user {current_user.user_id}")
 
         return {
             "job_id": job_id,
@@ -249,7 +249,7 @@ async def get_job_status(
             )
 
         # Verificar que el job pertenece al usuario actual
-        if job["user_id"] != uuid.UUID(current_user.id):
+        if job["user_id"] != uuid.UUID(current_user.user_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Trabajo no encontrado",
@@ -308,7 +308,7 @@ async def list_jobs(
         offset = (page - 1) * page_size
 
         jobs = await repo.list_jobs(
-            user_id=current_user.id,
+            user_id=current_user.user_id,
             status=status_filter,
             topic=topic_filter,
             limit=page_size,
@@ -316,7 +316,7 @@ async def list_jobs(
         )
 
         total = await repo.count_jobs(
-            user_id=current_user.id,
+            user_id=current_user.user_id,
             status=status_filter,
             topic=topic_filter,
         )
@@ -384,7 +384,7 @@ async def cancel_job(
             )
 
         # Verificar pertenencia
-        if job["user_id"] != uuid.UUID(current_user.id):
+        if job["user_id"] != uuid.UUID(current_user.user_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Trabajo no encontrado",
@@ -406,7 +406,7 @@ async def cancel_job(
                 detail="Error cancelando el trabajo",
             )
 
-        logger.info(f"Job {job_id} cancelado por user {current_user.id}")
+        logger.info(f"Job {job_id} cancelado por user {current_user.user_id}")
 
         return {
             "job_id": job_id,
@@ -445,7 +445,7 @@ async def list_sources(
     """
     try:
         sources = await repo.list_completed_sources(
-            user_id=current_user.id,
+            user_id=current_user.user_id,
             topic=topic,
         )
 
@@ -497,7 +497,7 @@ async def get_stats(
     Retorna contadores por estado y totales.
     """
     try:
-        stats = await repo.get_stats(current_user.id)
+        stats = await repo.get_stats(current_user.user_id)
 
         return {
             "pending": stats.get("pending", 0),

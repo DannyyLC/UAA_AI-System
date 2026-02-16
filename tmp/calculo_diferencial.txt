@@ -1,0 +1,21 @@
+Introducción al Cálculo Diferencial
+
+El cálculo diferencial es una rama fundamental de las matemáticas que estudia las tasas de cambio y las pendientes de curvas.
+
+1. Definición de Derivada
+La derivada de una función f(x) en un punto x=a se define como:
+f'(a) = lim(h→0) [f(a+h) - f(a)] / h
+
+2. Reglas de Derivación
+- Regla de la potencia: d/dx(x^n) = n*x^(n-1)
+- Regla del producto: d/dx(f*g) = f'*g + f*g'
+- Regla de la cadena: d/dx(f(g(x))) = f'(g(x)) * g'(x)
+
+3. Aplicaciones
+- Encontrar máximos y mínimos de funciones
+- Calcular velocidades y aceleraciones
+- Optimización de problemas en física y economía
+
+Ejemplo:
+Si f(x) = x^2 + 3x + 2, entonces:
+f'(x) = 2x + 3

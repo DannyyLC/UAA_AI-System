@@ -17,9 +17,13 @@ from src.gateway.grpc_clients.chat_client import chat_client
 from src.gateway.kafka_producer import indexing_producer
 from src.gateway.middleware.cors import setup_cors
 from src.gateway.routes import auth, chat, documents, health
+from src.shared.database import DatabaseManager
 from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
+# Instancia global de DatabaseManager
+db_manager = DatabaseManager()
 
 
 @asynccontextmanager
@@ -33,6 +37,14 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("Iniciando API Gateway...")
+
+    try:
+        # Conectar con Database
+        await db_manager.connect()
+        logger.info("Conectado a PostgreSQL")
+    except Exception as e:
+        logger.error(f"Error conectando a PostgreSQL: {e}")
+        logger.warning("Indexación no disponible")
 
     try:
         # Conectar con Auth Service
@@ -69,7 +81,8 @@ async def lifespan(app: FastAPI):
         await auth_client.close()
         await chat_client.close()
         await indexing_producer.disconnect()
-        logger.info("Conexiones gRPC y Kafka cerradas")
+        await db_manager.disconnect()
+        logger.info("Conexiones cerradas (gRPC, Kafka, PostgreSQL)")
     except Exception as e:
         logger.error(f"Error cerrando conexiones: {e}")
 
