@@ -11,9 +11,10 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from src.gateway.middleware.cors import setup_cors
-from src.gateway.routes import auth, health, chat
+from src.gateway.routes import auth, health, chat, documents
 from src.gateway.grpc_clients.auth_client import auth_client
 from src.gateway.grpc_clients.chat_client import chat_client
+from src.gateway.kafka_producer import indexing_producer
 from src.shared.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -47,6 +48,14 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error conectando a Chat Service: {e}")
         logger.warning("Chat Service no disponible")
     
+    try:
+        # Conectar Kafka Producer
+        await indexing_producer.connect()
+        logger.info("Kafka Producer conectado")
+    except Exception as e:
+        logger.error(f"Error conectando Kafka Producer: {e}")
+        logger.warning("Indexación no disponible")
+    
     logger.info("API Gateway listo")
     
     yield
@@ -57,7 +66,8 @@ async def lifespan(app: FastAPI):
     try:
         await auth_client.close()
         await chat_client.close()
-        logger.info("Conexiones gRPC cerradas")
+        await indexing_producer.disconnect()
+        logger.info("Conexiones gRPC y Kafka cerradas")
     except Exception as e:
         logger.error(f"Error cerrando conexiones: {e}")
     
@@ -96,6 +106,7 @@ setup_cors(app)
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(documents.router, prefix="/api")
 
 
 # ============================================================
