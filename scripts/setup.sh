@@ -16,80 +16,80 @@ echo -e "${BLUE}========================================${NC}\n"
 
 # Verificar que estamos en el directorio correcto
 if [ ! -f "docker-compose.yml" ]; then
-    echo -e "${RED}❌ Error: No se encuentra docker-compose.yml${NC}"
-    echo -e "${YELLOW}   Ejecuta este script desde el directorio raíz del proyecto${NC}"
+    echo -e "${RED}Error: No se encuentra docker-compose.yml${NC}"
+    echo -e "${YELLOW} Ejecuta este script desde el directorio raíz del proyecto${NC}"
     exit 1
 fi
 
 # Verificar Docker
 if ! command -v docker &> /dev/null; then
-    echo -e "${RED}❌ Docker no está instalado${NC}"
+    echo -e "${RED}Docker no está instalado${NC}"
     exit 1
 fi
 
 if ! command -v docker-compose &> /dev/null; then
-    echo -e "${RED}❌ Docker Compose no está instalado${NC}"
+    echo -e "${RED}Docker Compose no está instalado${NC}"
     exit 1
 fi
 
 # Verificar .env
 if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}⚠️  Archivo .env no encontrado${NC}"
+    echo -e "${YELLOW}Archivo .env no encontrado${NC}"
     if [ -f ".env.example" ]; then
         echo -e "${YELLOW}   Copiando .env.example a .env...${NC}"
         cp .env.example .env
-        echo -e "${GREEN}✅ Archivo .env creado${NC}"
-        echo -e "${YELLOW}   ⚠️  IMPORTANTE: Edita .env y configura OPENAI_API_KEY${NC}"
+        echo -e "${GREEN}Archivo .env creado${NC}"
+        echo -e "${YELLOW}IMPORTANTE: Edita .env y configura OPENAI_API_KEY${NC}"
         exit 1
     else
-        echo -e "${RED}❌ Tampoco se encuentra .env.example${NC}"
+        echo -e "${RED}Tampoco se encuentra .env.example${NC}"
         exit 1
     fi
 fi
 
 # Verificar OPENAI_API_KEY
 if ! grep -q "OPENAI_API_KEY=sk-" .env; then
-    echo -e "${YELLOW}⚠️  OPENAI_API_KEY no configurada en .env${NC}"
+    echo -e "${YELLOW}OPENAI_API_KEY no configurada en .env${NC}"
     echo -e "${YELLOW}   Configúrala antes de continuar${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✅ Configuración validada${NC}\n"
+echo -e "${GREEN}Configuración validada${NC}\n"
 
 # 1. Iniciar infraestructura
-echo -e "${BLUE}📦 Iniciando infraestructura (PostgreSQL, Qdrant, Kafka)...${NC}"
+echo -e "${BLUE}Iniciando infraestructura (PostgreSQL, Qdrant, Kafka)...${NC}"
 docker-compose up -d postgres qdrant kafka
 
-echo -e "${YELLOW}⏳ Esperando a que los servicios estén listos (30 segundos)...${NC}"
+echo -e "${YELLOW}Esperando a que los servicios estén listos (30 segundos)...${NC}"
 sleep 30
 
 # 2. Inicializar base de datos
-echo -e "${BLUE}🗄️  Inicializando base de datos...${NC}"
+echo -e "${BLUE}Inicializando base de datos...${NC}"
 if python scripts/init_db.py; then
-    echo -e "${GREEN}✅ Base de datos inicializada${NC}"
+    echo -e "${GREEN}Base de datos inicializada${NC}"
 else
-    echo -e "${YELLOW}⚠️  Base de datos ya estaba inicializada${NC}"
+    echo -e "${YELLOW}Base de datos ya estaba inicializada${NC}"
 fi
 
 # 3. Crear topics de Kafka
-echo -e "${BLUE}📨 Creando topics de Kafka...${NC}"
+echo -e "${BLUE}Creando topics de Kafka...${NC}"
 if python scripts/create_kafka_topics.py; then
-    echo -e "${GREEN}✅ Topics creados${NC}"
+    echo -e "${GREEN}Topics creados${NC}"
 else
-    echo -e "${YELLOW}⚠️  Topics ya existían${NC}"
+    echo -e "${YELLOW}Topics ya existían${NC}"
 fi
 
 # 4. Validar sistema
-echo -e "${BLUE}🔍 Validando sistema...${NC}"
+echo -e "${BLUE}Validando sistema...${NC}"
 if python scripts/validate_indexing.py; then
-    echo -e "${GREEN}✅ Validación exitosa${NC}"
+    echo -e "${GREEN}Validación exitosa${NC}"
 else
-    echo -e "${RED}❌ Validación falló - revisa los errores arriba${NC}"
+    echo -e "${RED}Validación falló - revisa los errores arriba${NC}"
     exit 1
 fi
 
 echo -e "\n${BLUE}========================================${NC}"
-echo -e "${GREEN}✅ Sistema configurado correctamente${NC}"
+echo -e "${GREEN}Sistema configurado correctamente${NC}"
 echo -e "${BLUE}========================================${NC}\n"
 
 echo -e "${YELLOW}Próximos pasos:${NC}\n"
