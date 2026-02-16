@@ -146,8 +146,28 @@ else
     fi
 fi
 
-# Paso 4: Iniciar API Gateway
-echo -e "\n${BLUE}[4/5]${NC} Iniciando API Gateway..."
+# Paso 4: Iniciar Indexing Service
+echo -e "\n${BLUE}[4/6]${NC} Iniciando Indexing Service..."
+
+if check_service "indexing_service"; then
+    echo -e "${YELLOW}Indexing Service ya está corriendo${NC}"
+else
+    python -m src.services.indexing.main > "$LOGS_DIR/indexing_service.log" 2>&1 &
+    echo $! > "$PIDS_DIR/indexing_service.pid"
+    
+    # Esperar a que Indexing Service esté listo
+    sleep 3
+    
+    if check_service "indexing_service"; then
+        echo -e "${GREEN}Indexing Service iniciado (PID: $(cat $PIDS_DIR/indexing_service.pid))${NC}"
+    else
+        echo -e "${RED}Error al iniciar Indexing Service. Ver logs: $LOGS_DIR/indexing_service.log${NC}"
+        exit 1
+    fi
+fi
+
+# Paso 5: Iniciar API Gateway
+echo -e "\n${BLUE}[5/6]${NC} Iniciando API Gateway..."
 
 if check_service "gateway"; then
     echo -e "${YELLOW}API Gateway ya está corriendo${NC}"
@@ -166,8 +186,8 @@ else
     fi
 fi
 
-# Paso 5: Iniciar Audit Consumer (opcional)
-echo -e "\n${BLUE}[5/5]${NC} Iniciando Audit Consumer..."
+# Paso 6: Iniciar Audit Consumer (opcional)
+echo -e "\n${BLUE}[6/6]${NC} Iniciando Audit Consumer..."
 
 if check_service "audit_consumer"; then
     echo -e "${YELLOW}Audit Consumer ya está corriendo${NC}"
@@ -194,10 +214,11 @@ echo -e "${YELLOW}Logs disponibles en:${NC} $LOGS_DIR/"
 echo -e "${YELLOW}PIDs guardados en:${NC} $PIDS_DIR/"
 echo -e ""
 echo -e "${YELLOW}Servicios activos:${NC}"
-echo -e "   • Auth Service:    grpc://localhost:50051"
-echo -e "   • Chat Service:    grpc://localhost:50052"
-echo -e "   • API Gateway:     http://localhost:8000"
-echo -e "   • Swagger UI:      http://localhost:8000/docs"
+echo -e "   • Auth Service:     grpc://localhost:50051"
+echo -e "   • Chat Service:     grpc://localhost:50052"
+echo -e "   • Indexing Service: (Workers de indexación)"
+echo -e "   • API Gateway:      http://localhost:8000"
+echo -e "   • Swagger UI:       http://localhost:8000/docs"
 echo -e ""
 echo -e "${YELLOW}Comandos útiles:${NC}"
 echo -e "   • Ver logs:        tail -f $LOGS_DIR/<servicio>.log"

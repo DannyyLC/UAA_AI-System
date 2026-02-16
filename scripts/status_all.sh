@@ -69,6 +69,7 @@ echo ""
 echo -e "${BLUE}Servicios Python:${NC}"
 check_service_status "auth_service" "Auth Service"
 check_service_status "chat_service" "Chat Service"
+check_service_status "indexing_service" "Indexing Service"
 check_service_status "gateway" "API Gateway"
 check_service_status "audit_consumer" "Audit Consumer"
 

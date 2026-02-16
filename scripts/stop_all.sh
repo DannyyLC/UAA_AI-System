@@ -56,16 +56,19 @@ stop_service() {
 }
 
 # Detener servicios en orden inverso
-echo -e "${BLUE}[1/4]${NC} Deteniendo Audit Consumer..."
+echo -e "${BLUE}[1/5]${NC} Deteniendo Audit Consumer..."
 stop_service "audit_consumer"
 
-echo -e "\n${BLUE}[2/4]${NC} Deteniendo API Gateway..."
+echo -e "\n${BLUE}[2/5]${NC} Deteniendo API Gateway..."
 stop_service "gateway"
 
-echo -e "\n${BLUE}[3/4]${NC} Deteniendo Chat Service..."
+echo -e "\n${BLUE}[3/5]${NC} Deteniendo Indexing Service..."
+stop_service "indexing_service"
+
+echo -e "\n${BLUE}[4/5]${NC} Deteniendo Chat Service..."
 stop_service "chat_service"
 
-echo -e "\n${BLUE}[4/4]${NC} Deteniendo Auth Service..."
+echo -e "\n${BLUE}[5/5]${NC} Deteniendo Auth Service..."
 stop_service "auth_service"
 
 # Preguntar si se debe detener Docker Compose
