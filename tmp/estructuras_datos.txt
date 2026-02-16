@@ -1,0 +1,107 @@
+Estructuras de Datos Fundamentales
+
+Las estructuras de datos son formas de organizar y almacenar información en la computadora de manera que puedan ser utilizadas de manera eficiente.
+
+1. Arrays (Arreglos)
+Los arrays son colecciones de elementos del mismo tipo almacenados en posiciones contiguas de memoria.
+- Acceso: O(1)
+- Búsqueda: O(n)
+- Inserción/Eliminación: O(n)
+
+Ejemplo en Python:
+numeros = [1, 2, 3, 4, 5]
+print(numeros[0])  # Output: 1
+
+2. Listas Enlazadas (Linked Lists)
+Una lista enlazada es una secuencia de nodos donde cada nodo contiene datos y una referencia al siguiente nodo.
+
+Tipos:
+- Simple enlazada: cada nodo apunta al siguiente
+- Doble enlazada: cada nodo apunta al siguiente y al anterior
+- Circular: el último nodo apunta al primero
+
+Ventajas:
+- Inserción/Eliminación eficiente en O(1) si tienes la referencia
+- Tamaño dinámico
+
+Desventajas:
+- Acceso secuencial O(n)
+- Mayor uso de memoria por los punteros
+
+3. Pilas (Stacks)
+Estructura LIFO (Last In, First Out)
+
+Operaciones principales:
+- push(): agregar elemento
+- pop(): remover último elemento
+- peek(): ver último elemento sin removerlo
+
+Aplicaciones:
+- Evaluación de expresiones
+- Backtracking en algoritmos
+- Historial de navegación (undo/redo)
+
+4. Colas (Queues)
+Estructura FIFO (First In, First Out)
+
+Operaciones principales:
+- enqueue(): agregar al final
+- dequeue(): remover del frente
+- front(): ver el primer elemento
+
+Aplicaciones:
+- Sistemas de impresión
+- Manejo de solicitudes en servidores
+- Algoritmos BFS (Breadth-First Search)
+
+5. Árboles Binarios
+Estructura jerárquica donde cada nodo tiene como máximo dos hijos.
+
+Tipos especiales:
+- Árbol Binario de Búsqueda (BST): hijo izquierdo < padre < hijo derecho
+- Árbol AVL: BST balanceado
+- Árbol Rojo-Negro: BST con propiedades de color para balanceo
+
+Recorridos:
+- In-order (izquierda, raíz, derecha)
+- Pre-order (raíz, izquierda, derecha)
+- Post-order (izquierda, derecha, raíz)
+
+6. Tablas Hash (Hash Tables)
+Estructura que mapea claves a valores usando una función hash.
+
+Características:
+- Búsqueda: O(1) promedio
+- Inserción: O(1) promedio
+- Eliminación: O(1) promedio
+
+Manejo de colisiones:
+- Encadenamiento (chaining)
+- Direccionamiento abierto (open addressing)
+
+Aplicaciones:
+- Diccionarios en Python
+- Caché de datos
+- Índices de bases de datos
+
+7. Grafos
+Estructura que representa relaciones entre objetos mediante nodos (vértices) y conexiones (aristas).
+
+Tipos:
+- Dirigidos vs No dirigidos
+- Ponderados vs No ponderados
+- Cíclicos vs Acíclicos
+
+Representaciones:
+- Matriz de adyacencia
+- Lista de adyacencia
+
+Algoritmos importantes:
+- DFS (Depth-First Search)
+- BFS (Breadth-First Search)
+- Dijkstra (camino más corto)
+- Kruskal y Prim (árbol de expansión mínima)
+
+Conclusión:
+La elección de la estructura de datos correcta puede mejorar dramáticamente el rendimiento de un programa. 
+Es fundamental entender las ventajas y desventajas de cada una para aplicarlas apropiadamente según el problema.

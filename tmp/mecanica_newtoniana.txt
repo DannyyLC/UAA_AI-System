@@ -1,0 +1,112 @@
+Mecánica Newtoniana - Leyes del Movimiento
+
+La mecánica newtoniana es la rama de la física que describe el movimiento de los cuerpos y sus causas, basándose en las tres leyes de Newton.
+
+Las Tres Leyes de Newton
+
+1. Primera Ley - Ley de Inercia
+Un objeto en reposo permanece en reposo, y un objeto en movimiento continúa moviéndose con velocidad constante, a menos que actúe sobre él una fuerza externa neta.
+
+Fórmula: ΣF = 0  →  v = constante
+
+Aplicaciones:
+- Cinturones de seguridad en automóviles
+- Los astronautas flotan en el espacio (sin fricción)
+
+2. Segunda Ley - Ley de Fuerza y Aceleración
+La aceleración de un objeto es directamente proporcional a la fuerza neta que actúa sobre él e inversamente proporcional a su masa.
+
+Fórmula: F = ma
+
+Donde:
+- F = Fuerza (Newtons)
+- m = masa (kilogramos)
+- a = aceleración (m/s²)
+
+Ejemplo:
+Si aplicamos 10N a un objeto de 2kg:
+a = F/m = 10N / 2kg = 5 m/s²
+
+3. Tercera Ley - Acción y Reacción
+Para cada acción hay una reacción igual y opuesta. Cuando un objeto A ejerce una fuerza sobre un objeto B, el objeto B ejerce una fuerza de igual magnitud pero en dirección opuesta sobre A.
+
+Fórmula: F_AB = -F_BA
+
+Ejemplos:
+- El retroceso de un arma al disparar
+- Caminar (pie empuja suelo, suelo empuja pie)
+- Propulsión de cohetes
+
+Conceptos Fundamentales
+
+Velocidad:
+v = Δx/Δt  (cambio de posición en el tiempo)
+
+Aceleración:
+a = Δv/Δt  (cambio de velocidad en el tiempo)
+
+Momento Lineal:
+p = mv  (cantidad de movimiento)
+
+Impulso:
+J = FΔt = Δp  
+
+Energía Cinética:
+Ec = (1/2)mv²
+
+Energía Potencial Gravitatoria:
+Ep = mgh
+
+Donde:
+- h = altura
+- g = 9.81 m/s² (aceleración gravitacional)
+
+Trabajo:
+W = F·d·cos(θ)
+
+Potencia:
+P = W/t = F·v
+
+Conservación de la Energía:
+En un sistema aislado, la energía total permanece constante:
+Ec + Ep = constante
+
+Movimiento Rectilíneo Uniformemente Acelerado (MRUA)
+
+Ecuaciones del movimiento:
+1. v = v₀ + at
+2. x = x₀ + v₀t + (1/2)at²
+3. v² = v₀² + 2a(x - x₀)
+
+Caída Libre:
+Es un caso especial de MRUA donde a = g = 9.81 m/s²
+
+Tiempo de caída: t = √(2h/g)
+Velocidad al llegar al suelo: v = √(2gh)
+
+Movimiento Circular
+
+Velocidad angular: ω = Δθ/Δt
+Velocidad lineal: v = ωr
+Aceleración centrípeta: ac = v²/r = ω²r
+Fuerza centrípeta: Fc = mac = mv²/r
+
+Fricción
+
+Fuerza de fricción estática: fs ≤ μs·N
+Fuerza de fricción cinética: fk = μk·N
+
+Donde:
+- μs = coeficiente de fricción estática
+- μk = coeficiente de fricción cinética
+- N = fuerza normal
+
+Aplicaciones Prácticas:
+- Diseño de vehículos y sistemas de transporte
+- Balística y trayectoria de proyectiles
+- Ingeniería estructural
+- Deportes (análisis de movimientos)
+- Exploración espacial
+
+La mecánica newtoniana sigue siendo fundamental para entender el movimiento de objetos a velocidades
+mucho menores que la velocidad de la luz y a escalas macroscópicas.
