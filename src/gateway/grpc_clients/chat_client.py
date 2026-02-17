@@ -4,6 +4,7 @@ Cliente gRPC para Chat Service.
 Maneja la comunicación entre el Gateway y el Chat Service.
 """
 
+import os
 from typing import Any, AsyncGenerator, Dict, Optional
 
 import grpc
@@ -28,7 +29,7 @@ class ChatClient:
         """Inicializa el cliente (sin conectar todavía)."""
         self.channel: Optional[grpc_aio.Channel] = None
         self.stub: Optional[chat_pb2_grpc.ChatServiceStub] = None
-        self.host = "localhost"  # TODO: Obtener de settings o service discovery
+        self.host = os.getenv("CHAT_GRPC_HOST", "localhost")
         self.port = settings.chat_grpc_port
 
     async def connect(self):

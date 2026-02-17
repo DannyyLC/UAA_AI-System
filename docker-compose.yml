@@ -35,11 +35,6 @@ services:
       - ./data/qdrant/snapshots:/qdrant/snapshots
     environment:
       - QDRANT__SERVICE__GRPC_PORT=6334
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     restart: unless-stopped
 
   # ============================================================
@@ -75,8 +70,146 @@ services:
     restart: unless-stopped
 
   # ============================================================
-  # Servicio de indexación
+  # SERVICIOS PYTHON - RAG SYSTEM
   # ============================================================
+  
+  # --- Gateway (FastAPI REST API) ---
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gateway
+    command: uvicorn src.gateway.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+      # Montamos el código para hot-reload en desarrollo
+      - ./src:/app/src
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-rag_uaa}:${POSTGRES_PASSWORD:-rag_uaa_secret}@postgres:5432/${POSTGRES_DB:-rag_uaa}
+      # Qdrant
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      # Kafka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      # gRPC Services
+      - AUTH_GRPC_HOST=auth
+      - AUTH_GRPC_PORT=50051
+      - CHAT_GRPC_HOST=chat
+      - CHAT_GRPC_PORT=50052
+      # Gateway
+      - GATEWAY_PORT=8000
+      - GATEWAY_HOST=0.0.0.0
+      # JWT
+      - JWT_SECRET=${JWT_SECRET:-cambiar-en-produccion-por-un-secreto-seguro}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-60}
+      # OpenAI
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      # General
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      auth:
+        condition: service_started
+      chat:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # --- Auth Service (gRPC) ---
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth
+    command: python -m src.services.auth.server
+    ports:
+      - "${AUTH_GRPC_PORT:-50051}:50051"
+    volumes:
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+      - ./src:/app/src
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-rag_uaa}:${POSTGRES_PASSWORD:-rag_uaa_secret}@postgres:5432/${POSTGRES_DB:-rag_uaa}
+      # Kafka (para auditoría)
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      # JWT
+      - JWT_SECRET=${JWT_SECRET:-cambiar-en-produccion-por-un-secreto-seguro}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-60}
+      - JWT_REFRESH_EXPIRATION_DAYS=${JWT_REFRESH_EXPIRATION_DAYS:-7}
+      # Puerto
+      - AUTH_GRPC_PORT=50051
+      # General
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- Chat Service (gRPC) ---
+  chat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chat
+    command: python -m src.services.chat.server
+    ports:
+      - "${CHAT_GRPC_PORT:-50052}:50052"
+    volumes:
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+      - ./src:/app/src
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-rag_uaa}:${POSTGRES_PASSWORD:-rag_uaa_secret}@postgres:5432/${POSTGRES_DB:-rag_uaa}
+      # Qdrant
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-documents}
+      # Kafka (para auditoría)
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      # LLM
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      - EMBEDDING_DIMENSION=${EMBEDDING_DIMENSION:-1536}
+      # Puerto
+      - CHAT_GRPC_PORT=50052
+      # General
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- Indexing Service (Consumer Kafka) ---
   indexing:
     build:
       context: .
@@ -87,25 +220,32 @@ services:
       - ./data/uploads:/app/data/uploads
       - ./logs:/app/logs
       - ./.env:/app/.env
+      - ./src:/app/src
     environment:
       # Database
       - DATABASE_URL=postgresql://${POSTGRES_USER:-rag_uaa}:${POSTGRES_PASSWORD:-rag_uaa_secret}@postgres:5432/${POSTGRES_DB:-rag_uaa}
       # Qdrant
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-documents}
       # Kafka
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9094
       - KAFKA_INDEXING_QUEUE=indexing.queue
       - KAFKA_INDEXING_DLQ=indexing.dlq
       # Workers
       - INDEXING_WORKERS=${INDEXING_WORKERS:-2}
-      # OpenAI
+      # OpenAI (para embeddings)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      - EMBEDDING_DIMENSION=${EMBEDDING_DIMENSION:-1536}
+      # General
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
       postgres:
         condition: service_healthy
       qdrant:
-        condition: service_healthy
+        condition: service_started
       kafka:
         condition: service_healthy
     restart: unless-stopped
