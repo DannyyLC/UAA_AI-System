@@ -362,7 +362,7 @@ async def list_jobs(
         401: {"model": ErrorResponse, "description": "No autenticado"},
     },
     summary="Cancelar trabajo de indexación",
-    description="Cancela un trabajo pendiente o en proceso",
+    description="Cancela un trabajo pendiente o en proceso (NO elimina documentos ya indexados)",
 )
 async def cancel_job(
     job_id: str,
@@ -370,9 +370,12 @@ async def cancel_job(
     repo: IndexingRepository = Depends(get_indexing_repo),
 ):
     """
-    Cancela un trabajo de indexación.
+    Cancela un trabajo de indexación en curso.
 
     Solo se pueden cancelar trabajos en estado PENDING o PROCESSING.
+    Este endpoint NO elimina documentos ya indexados ni sus chunks de Qdrant.
+    
+    Para eliminar documentos completamente indexados, usar: DELETE /sources/{filename}
     """
     try:
         job = await repo.get_job(job_id)
@@ -514,4 +517,111 @@ async def get_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error obteniendo estadísticas",
+        )
+
+
+@router.delete(
+    "/sources/{filename}",
+    responses={
+        200: {"description": "Documento eliminado exitosamente"},
+        404: {"model": ErrorResponse, "description": "Documento no encontrado"},
+        401: {"model": ErrorResponse, "description": "No autenticado"},
+        500: {"model": ErrorResponse, "description": "Error eliminando documento"},
+    },
+    summary="Eliminar documento indexado",
+    description="Elimina completamente un documento de la base de conocimiento (chunks en Qdrant y registro en DB)",
+)
+async def delete_source(
+    filename: str,
+    topic: Optional[str] = Query(None, description="Tema del documento (opcional)"),
+    current_user: UserResponse = Depends(get_current_user),
+    repo: IndexingRepository = Depends(get_indexing_repo),
+):
+    """
+    Elimina un documento completamente indexado.
+
+    - **filename**: Nombre del archivo a eliminar
+    - **topic**: Tema académico (opcional, útil si el mismo archivo existe en varios temas)
+
+    Este endpoint:
+    1. Busca el documento indexado del usuario
+    2. Elimina todos sus chunks de Qdrant
+    3. Elimina el registro del job de la base de datos
+
+    NOTA: Solo elimina documentos en estado COMPLETED.
+    Para cancelar trabajos pendientes, usar DELETE /jobs/{job_id}
+    """
+    try:
+        # 1. Buscar el job completado
+        job = await repo.find_completed_job_by_filename(
+            user_id=current_user.user_id, filename=filename, topic=topic
+        )
+
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Documento '{filename}' no encontrado o no está completamente indexado",
+            )
+
+        job_id = str(job["id"])
+        job_topic = job["topic"]
+        chunks_count = job["chunks_created"]
+
+        logger.info(
+            f"Eliminando documento: {filename} (job={job_id}, "
+            f"user={current_user.user_id}, topic={job_topic}, chunks={chunks_count})"
+        )
+
+        # 2. Eliminar chunks de Qdrant
+        from src.services.indexing.qdrant_manager import QdrantIndexer
+
+        qdrant = QdrantIndexer()
+        qdrant.connect()
+
+        try:
+            # Eliminar por job_id (más preciso)
+            chunks_deleted = qdrant.delete_by_job(job_id)
+            logger.info(f"Eliminados {chunks_deleted} chunks de Qdrant para job {job_id}")
+        except Exception as e:
+            logger.error(f"Error eliminando chunks de Qdrant: {e}")
+            # Intentar con user_id + topic como fallback
+            try:
+                chunks_deleted = qdrant.delete_by_user_and_topic(
+                    user_id=current_user.user_id, topic=job_topic
+                )
+                logger.info(
+                    f"Eliminados {chunks_deleted} chunks usando user_id + topic (fallback)"
+                )
+            except Exception as e2:
+                logger.error(f"Error en fallback de eliminación: {e2}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Error eliminando chunks del vector database",
+                )
+        finally:
+            qdrant.close()
+
+        # 3. Eliminar registro del job de la base de datos
+        deleted = await repo.delete_job(job_id)
+
+        if not deleted:
+            logger.warning(f"Job {job_id} no se pudo eliminar de la DB")
+
+        logger.info(f"Documento {filename} eliminado completamente (user={current_user.user_id})")
+
+        return {
+            "message": "Documento eliminado exitosamente",
+            "filename": filename,
+            "topic": job_topic,
+            "chunks_deleted": chunks_deleted,
+            "job_id": job_id,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error eliminando documento {filename}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error eliminando el documento",
         )

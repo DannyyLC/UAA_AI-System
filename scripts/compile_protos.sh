@@ -19,13 +19,17 @@ echo "Output dir: $OUT_DIR"
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
-# Compilar todos los .proto
+# Compilar solo los .proto activos (excluir archived/)
+# Servicios implementados: auth.proto, chat.proto, common.proto
+echo "Compilando: common.proto, auth.proto, chat.proto"
 python -m grpc_tools.protoc \
   --proto_path="$PROTO_DIR" \
   --python_out="$OUT_DIR" \
   --pyi_out="$OUT_DIR" \
   --grpc_python_out="$OUT_DIR" \
-  "$PROTO_DIR"/*.proto
+  "$PROTO_DIR"/common.proto \
+  "$PROTO_DIR"/auth.proto \
+  "$PROTO_DIR"/chat.proto
 
 # Corregir imports para que sean relativos dentro del paquete
 # (grpcio-tools genera "import common_pb2" en vez de "from . import common_pb2")
@@ -36,8 +40,6 @@ for f in *.py; do
   sed -i 's/^import common_pb2/from . import common_pb2/' "$f"
   sed -i 's/^import auth_pb2/from . import auth_pb2/' "$f"
   sed -i 's/^import chat_pb2/from . import chat_pb2/' "$f"
-  sed -i 's/^import rag_pb2/from . import rag_pb2/' "$f"
-  sed -i 's/^import indexing_pb2/from . import indexing_pb2/' "$f"
 done
 
 # Crear __init__.py con exports

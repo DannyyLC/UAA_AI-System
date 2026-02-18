@@ -271,6 +271,59 @@ class IndexingRepository:
         )
         return [row["topic"] for row in rows]
 
+    async def find_completed_job_by_filename(
+        self, user_id: str, filename: str, topic: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Busca un trabajo completado por nombre de archivo.
+
+        Args:
+            user_id: ID del usuario
+            filename: Nombre del archivo
+            topic: Filtro opcional por tema
+
+        Returns:
+            Registro del trabajo o None
+        """
+        if topic:
+            row = await self.db.fetchone(
+                """
+                SELECT id, user_id, filename, topic, mime_type,
+                       status, chunks_created, error_message,
+                       created_at, updated_at
+                FROM indexing_jobs
+                WHERE user_id = $1::uuid 
+                  AND filename = $2 
+                  AND topic = $3
+                  AND status = $4
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                user_id,
+                filename,
+                topic,
+                JobStatus.COMPLETED,
+            )
+        else:
+            row = await self.db.fetchone(
+                """
+                SELECT id, user_id, filename, topic, mime_type,
+                       status, chunks_created, error_message,
+                       created_at, updated_at
+                FROM indexing_jobs
+                WHERE user_id = $1::uuid 
+                  AND filename = $2
+                  AND status = $3
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                user_id,
+                filename,
+                JobStatus.COMPLETED,
+            )
+
+        return dict(row) if row else None
+
     # ================================================================
     # UPDATE
     # ================================================================
