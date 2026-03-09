@@ -358,11 +358,16 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             sources = []
             tool_calls_pending = []
 
+            # Determinar modelo a usar (override del request o default)
+            model_override = request.model if request.model else None
+            if model_override:
+                logger.info(f"Usando modelo override: {model_override}")
+
             # 7. Primera llamada al LLM (puede decidir usar RAG)
             logger.info("Llamando al LLM (primera iteración)...")
 
             async for chunk in self.llm.chat_completion_stream(
-                messages=messages, tools=tools, tool_choice="auto"
+                messages=messages, tools=tools, tool_choice="auto", model=model_override
             ):
                 # Contenido de texto
                 if chunk["type"] == "content":
@@ -456,6 +461,7 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                             messages=messages,
                             tools=None,  # No más tools en esta iteración
                             tool_choice="none",
+                            model=model_override,
                         ):
                             if chunk2["type"] == "content":
                                 full_response += chunk2["delta"]

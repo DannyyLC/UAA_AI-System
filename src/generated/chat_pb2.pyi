@@ -3,7 +3,8 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -131,14 +132,16 @@ class DeleteConversationResponse(_message.Message):
     def __init__(self, success: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_common_pb2.Error, _Mapping]] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
-    __slots__ = ("conversation_id", "user_id", "content")
+    __slots__ = ("conversation_id", "user_id", "content", "model")
     CONVERSATION_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
+    MODEL_FIELD_NUMBER: _ClassVar[int]
     conversation_id: str
     user_id: str
     content: str
-    def __init__(self, conversation_id: _Optional[str] = ..., user_id: _Optional[str] = ..., content: _Optional[str] = ...) -> None: ...
+    model: str
+    def __init__(self, conversation_id: _Optional[str] = ..., user_id: _Optional[str] = ..., content: _Optional[str] = ..., model: _Optional[str] = ...) -> None: ...
 
 class SendMessageResponse(_message.Message):
     __slots__ = ("chunk_type", "token", "message", "used_rag", "error")

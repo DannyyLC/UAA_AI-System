@@ -154,6 +154,7 @@ class LiteLLMClient:
         tool_choice: str = "auto",
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        model: Optional[str] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Genera una respuesta con streaming.
@@ -177,9 +178,10 @@ class LiteLLMClient:
         try:
             temp = temperature if temperature is not None else self.temperature
             max_tok = max_tokens if max_tokens is not None else self.max_tokens
+            effective_model = model if model else self.model
 
             kwargs = {
-                "model": self.model,
+                "model": effective_model,
                 "messages": messages,
                 "temperature": temp,
                 "stream": True,

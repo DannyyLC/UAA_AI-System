@@ -52,6 +52,7 @@ class SendMessageRequest(BaseModel):
     """Request para enviar mensaje."""
 
     content: str = Field(min_length=1, max_length=10000)
+    model: str = Field(default="", description="Modelo LLM a usar (vacío = default del servidor)")
 
 
 class DeleteConversationResponse(BaseModel):
@@ -64,6 +65,12 @@ class TopicsResponse(BaseModel):
     """Response con temas disponibles."""
 
     topics: list[str]
+
+
+class ModelsResponse(BaseModel):
+    """Response con modelos LLM disponibles."""
+
+    models: list[dict]
 
 
 # ============================================================
@@ -275,6 +282,7 @@ async def send_message(
                 conversation_id=conversation_id,
                 user_id=current_user.user_id,
                 content=request.content,
+                model=request.model,
             ):
                 # Formatear como SSE
                 event_type = chunk["type"]
@@ -351,3 +359,26 @@ async def get_user_topics(current_user: Annotated[UserResponse, Depends(get_curr
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno del servidor"
         )
+
+
+@router.get(
+    "/models",
+    response_model=ModelsResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {"description": "Lista de modelos LLM disponibles"},
+        401: {"model": ErrorResponse, "description": "No autenticado"},
+    },
+    summary="Obtener modelos disponibles",
+    description="Retorna la lista de modelos LLM configurados para comparación",
+)
+async def get_available_models(
+    current_user: Annotated[UserResponse, Depends(get_current_user)],
+):
+    """Retorna los modelos LLM disponibles."""
+    models = [
+        {"id": "ollama/mistral:7b", "name": "Mistral 7B", "provider": "Ollama"},
+        {"id": "ollama/gemma3:4b", "name": "Gemma 3 4B", "provider": "Ollama"},
+        {"id": "ollama/llama3.1:8b", "name": "Llama 3.1 8B", "provider": "Ollama"},
+    ]
+    return ModelsResponse(models=models)

@@ -236,7 +236,7 @@ class ChatClient:
     # ============================================================
 
     async def send_message_stream(
-        self, conversation_id: str, user_id: str, content: str
+        self, conversation_id: str, user_id: str, content: str, model: str = ""
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Envía un mensaje y recibe respuesta en streaming.
@@ -245,6 +245,7 @@ class ChatClient:
             conversation_id: ID de la conversación
             user_id: ID del usuario
             content: Contenido del mensaje
+            model: Modelo LLM a usar (opcional, vacío = default del servidor)
 
         Yields:
             Diccionarios con chunks de la respuesta:
@@ -258,7 +259,7 @@ class ChatClient:
         """
         try:
             request = chat_pb2.SendMessageRequest(
-                conversation_id=conversation_id, user_id=user_id, content=content
+                conversation_id=conversation_id, user_id=user_id, content=content, model=model
             )
 
             stream = self.stub.SendMessage(request)
