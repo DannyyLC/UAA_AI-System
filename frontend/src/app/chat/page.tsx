@@ -113,37 +113,36 @@ export default function ChatPage() {
         }));
 
         // Stream the response
-        await sendMessageStream(convId!, content, state.model.id, {
-          onToken: (token) => {
+        const stream = sendMessageStream(convId!, { content, model: state.model.id });
+        
+        for await (const chunk of stream) {
+          if (chunk.type === "token") {
             updateModelState(idx, (s) => {
               const msgs = [...s.messages];
               const last = msgs[msgs.length - 1];
               if (last && last.role === "assistant") {
                 msgs[msgs.length - 1] = {
                   ...last,
-                  content: last.content + token,
+                  content: last.content + chunk.token,
                   isStreaming: true,
                 };
               }
               return { ...s, messages: msgs };
             });
-          },
-          onRagStart: () => {
+          } else if (chunk.type === "rag_start") {
             updateModelState(idx, (s) => ({ ...s, isSearchingRAG: true }));
-          },
-          onRagDone: () => {
+          } else if (chunk.type === "rag_done") {
             updateModelState(idx, (s) => ({ ...s, isSearchingRAG: false }));
-          },
-          onDone: (data) => {
+          } else if (chunk.type === "done") {
             updateModelState(idx, (s) => {
               const msgs = [...s.messages];
               const last = msgs[msgs.length - 1];
               if (last && last.role === "assistant") {
                 msgs[msgs.length - 1] = {
                   ...last,
-                  content: data.message.content || last.content,
+                  content: chunk.message?.content || last.content,
                   isStreaming: false,
-                  used_rag: data.used_rag,
+                  used_rag: chunk.used_rag,
                 };
               }
               return {
@@ -153,15 +152,14 @@ export default function ChatPage() {
                 isSearchingRAG: false,
               };
             });
-          },
-          onError: (err) => {
+          } else if (chunk.type === "error") {
             updateModelState(idx, (s) => {
               const msgs = [...s.messages];
               const last = msgs[msgs.length - 1];
               if (last && last.role === "assistant") {
                 msgs[msgs.length - 1] = {
                   ...last,
-                  content: `Error: ${err.message}`,
+                  content: `Error: ${chunk.message || "Error desconocido"}`,
                   isStreaming: false,
                 };
               }
@@ -172,8 +170,8 @@ export default function ChatPage() {
                 isSearchingRAG: false,
               };
             });
-          },
-        });
+          }
+        }
       } catch (err) {
         updateModelState(idx, (s) => ({
           ...s,

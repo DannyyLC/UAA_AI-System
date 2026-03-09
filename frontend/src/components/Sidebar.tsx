@@ -23,8 +23,14 @@ export default function Sidebar({ onRefresh }: SidebarProps) {
     try {
       const data = await getDocumentSources();
       setSources(data);
-      // Auto-expand all topics
-      setExpandedTopics(new Set(data.topics));
+      // Auto-expand all topics on first load or if they are new
+      setExpandedTopics((prev) => {
+        const next = new Set(prev);
+        data.topics.forEach((t) => {
+          if (prev.size === 0) next.add(t);
+        });
+        return next;
+      });
     } catch {
       /* user may not have docs yet */
     } finally {
@@ -35,6 +41,22 @@ export default function Sidebar({ onRefresh }: SidebarProps) {
   useEffect(() => {
     fetchSources();
   }, [fetchSources]);
+
+  // Separate effect for polling to avoid triggering effect loops
+  useEffect(() => {
+    // Only poll if there are pending jobs
+    const hasPending = sources?.topics.some((topic) =>
+      sources.sources[topic]?.some((doc) => doc.status === "pending" || doc.status === "processing")
+    );
+
+    if (!hasPending) return;
+
+    const interval = setInterval(() => {
+      fetchSources();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [sources, fetchSources]);
 
   const toggleTopic = (topic: string) => {
     setExpandedTopics((prev) => {
@@ -155,7 +177,23 @@ export default function Sidebar({ onRefresh }: SidebarProps) {
                           <span className="flex-1 truncate" title={doc.filename}>
                             {doc.filename}
                           </span>
-                          <span className="text-gray-600">{doc.chunks}ch</span>
+                          {doc.status !== "completed" ? (
+                            <span
+                              className={`text-[10px] px-1 rounded ${
+                                doc.status === "failed"
+                                  ? "bg-red-900/30 text-red-400"
+                                  : "bg-indigo-900/30 text-indigo-400 animate-pulse"
+                              }`}
+                            >
+                              {doc.status === "pending"
+                                ? "Pendiente"
+                                : doc.status === "processing"
+                                ? "Procesando"
+                                : "Error"}
+                            </span>
+                          ) : (
+                            <span className="text-gray-600">{doc.chunks}ch</span>
+                          )}
                           <button
                             onClick={() => handleDelete(doc.filename, topic)}
                             disabled={deletingFile === doc.filename}

@@ -366,9 +366,39 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             # 7. Primera llamada al LLM (puede decidir usar RAG)
             logger.info("Llamando al LLM (primera iteración)...")
 
-            async for chunk in self.llm.chat_completion_stream(
-                messages=messages, tools=tools, tool_choice="auto", model=model_override
-            ):
+            is_bedrock_no_stream = model_override and ('llama3' in model_override or 'gemma' in model_override)
+            
+            if is_bedrock_no_stream:
+                logger.info('Usando fetch estatico para modelo incompatible con tool call stream')
+                yield chat_pb2.SendMessageResponse(
+                    chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_TOKEN,
+                    token='[ INFO: El LLM esta generando su respuesta y evaluando hacer uso de RAG (streaming no disponible en AWS Bedrock para esta accion)... ]\n\n',
+                )
+                
+                response = await self.llm.chat_completion(
+                    messages=messages, tools=tools, tool_choice='auto', model=model_override
+                )
+                
+                chunks = []
+                if response.get('content'):
+                    chunks.append({'type': 'content', 'delta': response['content']})
+                
+                if response.get('tool_calls'):
+                    chunks.append({'type': 'tool_call', 'tool_calls': response['tool_calls']})
+                
+                finish_reason = response.get('finish_reason', 'stop')
+                chunks.append({'type': 'done', 'finish_reason': finish_reason})
+                
+                async def gen_chunks():
+                    for c in chunks:
+                        yield c
+                stream_gen = gen_chunks()
+            else:
+                stream_gen = self.llm.chat_completion_stream(
+                    messages=messages, tools=tools, tool_choice='auto', model=model_override
+                )
+
+            async for chunk in stream_gen:
                 # Contenido de texto
                 if chunk["type"] == "content":
                     full_response += chunk["delta"]
@@ -418,6 +448,7 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                                 context = rag_result["context"]
 
                                 logger.info(f"RAG completado: {len(sources)} fuentes encontradas")
+                                logger.info(f"=== CONTEXTO RAG ENVIADO AL LLM ===\n{context}\n===================================")
 
                                 # Notificar al cliente
                                 yield chat_pb2.SendMessageResponse(

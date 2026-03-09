@@ -463,6 +463,7 @@ async def list_sources(
                     "job_id": str(source["id"]),
                     "filename": source["filename"],
                     "chunks": source["chunks_created"],
+                    "status": source["status"],
                     "indexed_at": source["updated_at"].isoformat(),
                 }
             )

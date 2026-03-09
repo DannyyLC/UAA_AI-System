@@ -212,7 +212,7 @@ class IndexingRepository:
         self, user_id: str, topic: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        Lista documentos completamente indexados de un usuario.
+        Lista documentos de un usuario (incluyendo pendientes).
 
         Args:
             user_id: ID del usuario
@@ -224,34 +224,31 @@ class IndexingRepository:
         if topic:
             rows = await self.db.fetch(
                 """
-                SELECT id, filename, topic, chunks_created, created_at, updated_at
+                SELECT id, filename, topic, status, chunks_created, created_at, updated_at
                 FROM indexing_jobs
                 WHERE user_id = $1::uuid 
-                  AND status = $2 
-                  AND topic = $3
+                  AND topic = $2
                 ORDER BY updated_at DESC
                 """,
                 user_id,
-                JobStatus.COMPLETED,
                 topic,
             )
         else:
             rows = await self.db.fetch(
                 """
-                SELECT id, filename, topic, chunks_created, created_at, updated_at
+                SELECT id, filename, topic, status, chunks_created, created_at, updated_at
                 FROM indexing_jobs
-                WHERE user_id = $1::uuid AND status = $2
+                WHERE user_id = $1::uuid
                 ORDER BY updated_at DESC
                 """,
                 user_id,
-                JobStatus.COMPLETED,
             )
 
         return [dict(row) for row in rows]
 
     async def get_topics_by_user(self, user_id: str) -> List[str]:
         """
-        Obtiene los temas únicos de documentos indexados por un usuario.
+        Obtiene los temas únicos de documentos de un usuario.
 
         Args:
             user_id: ID del usuario
@@ -263,11 +260,10 @@ class IndexingRepository:
             """
             SELECT DISTINCT topic
             FROM indexing_jobs
-            WHERE user_id = $1::uuid AND status = $2
+            WHERE user_id = $1::uuid
             ORDER BY topic
             """,
             user_id,
-            JobStatus.COMPLETED,
         )
         return [row["topic"] for row in rows]
 

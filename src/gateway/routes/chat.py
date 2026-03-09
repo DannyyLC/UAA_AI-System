@@ -377,8 +377,8 @@ async def get_available_models(
 ):
     """Retorna los modelos LLM disponibles."""
     models = [
-        {"id": "ollama/mistral:7b", "name": "Mistral 7B", "provider": "Ollama"},
-        {"id": "ollama/gemma3:4b", "name": "Gemma 3 4B", "provider": "Ollama"},
-        {"id": "ollama/llama3.1:8b", "name": "Llama 3.1 8B", "provider": "Ollama"},
+        {"id": "bedrock/mistral.mistral-7b-instruct-v0:2", "name": "Mistral 7B", "provider": "AWS Bedrock"},
+        {"id": "bedrock/google.gemma-3-4b-it", "name": "Gemma 3 4B", "provider": "AWS Bedrock"},
+        {"id": "bedrock/meta.llama3-1-8b-instruct-v1:0", "name": "Llama 3.1 8B", "provider": "AWS Bedrock"},
     ]
     return ModelsResponse(models=models)

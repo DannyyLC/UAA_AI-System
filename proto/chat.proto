@@ -123,6 +123,7 @@ message SendMessageRequest {
   string conversation_id = 1;
   string user_id = 2;
   string content = 3; // Mensaje del usuario
+  string model = 4; // Referencia al tipo/id de modelo 
 }
 
 // Streaming: el servidor envía chunks progresivos

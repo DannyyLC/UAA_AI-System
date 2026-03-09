@@ -117,11 +117,11 @@ app = FastAPI(
 # Configurar CORS
 setup_cors(app)
 
-# Registrar routers
-app.include_router(health.router, prefix="/api")
-app.include_router(auth.router, prefix="/api")
-app.include_router(chat.router, prefix="/api")
-app.include_router(documents.router, prefix="/api")
+# Registrar routers (con prefijo /api/v1)
+app.include_router(health.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
+app.include_router(documents.router, prefix="/api/v1")
 
 
 # ============================================================

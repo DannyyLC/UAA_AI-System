@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     jwt_refresh_expiration_days: int = Field(default=7)
 
     # --- LLM (LiteLLM) ---
-    llm_model: str = Field(default="gpt-4o-mini")
+    llm_model: str = Field(default="bedrock/mistral.mistral-7b-instruct-v0:2")
     openai_api_key: Optional[str] = Field(default=None)
     anthropic_api_key: Optional[str] = Field(default=None)
     gemini_api_key: Optional[str] = Field(default=None)

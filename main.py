@@ -99,13 +99,13 @@ def save_query_result(
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.cursor()
 
-    gemma = results.get("gemma3:4b", "")
-    mistral = results.get("mistral:7b", "")
-    llama = results.get("llama3.1:8b", "")
+    gemma = results.get("bedrock/google.gemma-3-4b-it", "")
+    mistral = results.get("bedrock/mistral.mistral-7b-instruct-v0:2", "")
+    llama = results.get("bedrock/meta.llama3-1-8b-instruct-v1:0", "")
 
-    gemma_time = times.get("gemma3:4b", 0.0)
-    mistral_time = times.get("mistral:7b", 0.0)
-    llama_time = times.get("llama3.1:8b", 0.0)
+    gemma_time = times.get("bedrock/google.gemma-3-4b-it", 0.0)
+    mistral_time = times.get("bedrock/mistral.mistral-7b-instruct-v0:2", 0.0)
+    llama_time = times.get("bedrock/meta.llama3-1-8b-instruct-v1:0", 0.0)
 
     cursor.execute(
         """
@@ -199,7 +199,7 @@ async def process_query_multiple_models(query: str) -> tuple[Dict[str, Any], Dic
     """
     Ejecuta la consulta en múltiples modelos y devuelve {modelo: respuesta} y {modelo: tiempo}.
     """
-    models = ["gemma3:4b", "mistral:7b", "llama3.1:8b"]
+    models = ["bedrock/google.gemma-3-4b-it", "bedrock/mistral.mistral-7b-instruct-v0:2", "bedrock/meta.llama3-1-8b-instruct-v1:0"]
     response: Dict[str, Any] = {}
     execution_times: Dict[str, float] = {}
 
@@ -478,7 +478,7 @@ async def main():
 
     print("Construyendo grafo...")
     graph = build_graph()
-    model_name = "gemma3:4b"
+    model_name = "bedrock/google.gemma-3-4b-it"
     judge_graph = crear_sistema_refinamiento(model_name=model_name)
 
     print("Creando estado inicial...")
