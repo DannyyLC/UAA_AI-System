@@ -3,13 +3,12 @@ Chat Service Handlers - Lógica de negocio para gestión de conversaciones y cha
 
 Orquesta:
 - Gestión de conversaciones y mensajes
-- Integración con LiteLLM (function calling)
-- Búsqueda RAG cuando el LLM lo requiera
+- Clasificación de preguntas (en colección o general)
+- Búsqueda RAG cuando la pregunta cae en una colección
 - Streaming de respuestas
 - Eventos de auditoría
 """
 
-import json
 from typing import AsyncGenerator, Optional
 
 import grpc
@@ -18,12 +17,12 @@ from src.generated import chat_pb2, chat_pb2_grpc, common_pb2
 from src.kafka.audit import AuditProducer
 from src.services.chat.database import ChatRepository
 from src.services.chat.litellm_client import LiteLLMClient
-from src.services.chat.rag.qdrant_client import QdrantManager
 from src.services.chat.rag.retrieval import RAGRetriever
 from src.services.chat.tools import (
-    create_system_message_with_topics,
-    format_tool_call_result,
-    get_rag_tools,
+    create_classification_prompt,
+    create_general_system_message,
+    create_rag_system_message,
+    parse_classification_result,
 )
 from src.shared.logging_utils import get_logger
 from src.shared.utils import datetime_to_proto_timestamp, generate_id
@@ -293,20 +292,23 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
         """
         Envía un mensaje y genera respuesta del LLM con streaming.
 
-        Flujo:
+        Flujo fijo (sin function calling):
         1. Valida que la conversación pertenezca al usuario
         2. Obtiene temas disponibles del usuario
-        3. Crea system message con temas
-        4. Obtiene historial de la conversación
-        5. Llama al LLM (con function calling habilitado)
-        6. Si el LLM llama a RAG tool, ejecuta búsqueda
-        7. Streamea la respuesta al cliente
-        8. Guarda mensajes en DB
+        3. Si hay temas: clasifica la pregunta en una colección o "general"
+        4. Si la clasificación es una colección: busca contexto con RAG
+        5. Streamea la respuesta del LLM (con o sin contexto)
+        6. Guarda mensajes en DB
         """
         try:
             logger.info(
-                f"SendMessage: conversation_id={request.conversation_id}, "
-                f"user_id={request.user_id}"
+                f"{'='*60}\n"
+                f"  NUEVA CONSULTA\n"
+                f"  conversation_id={request.conversation_id}\n"
+                f"  user_id={request.user_id}\n"
+                f"  modelo={request.model or 'default'}\n"
+                f"  pregunta={request.content[:100]}{'...' if len(request.content) > 100 else ''}\n"
+                f"{'='*60}"
             )
 
             # Verificar ownership
@@ -326,187 +328,128 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             user_message = await self.repo.create_message(
                 conversation_id=request.conversation_id, role="user", content=request.content
             )
+            logger.info("[ETAPA 1/7] Mensaje del usuario guardado en DB")
 
             # 2. Obtener temas disponibles del usuario
-            logger.info("Obteniendo temas disponibles del usuario...")
             topics = await self.repo.get_user_topics(request.user_id)
-            logger.info(f"Temas disponibles: {topics}")
+            logger.info(f"[ETAPA 2/7] Temas disponibles del usuario: {topics if topics else '(ninguno)'}")
 
-            # 3. Crear system message con temas
-            system_message = create_system_message_with_topics(topics)
-
-            # 4. Obtener historial de mensajes
+            # 3. Obtener historial de mensajes
             history = await self.repo.get_conversation_history(
-                request.conversation_id, limit=10  # Últimos 10 mensajes
+                request.conversation_id, limit=10
             )
+            logger.info(f"[ETAPA 3/7] Historial recuperado: {len(history)} mensajes")
 
-            # 5. Formatear mensajes para el LLM
-            messages = self.llm.format_messages(
-                system_message=system_message,
-                conversation_history=history[
-                    :-1
-                ],  # Excluir el último (es el que acabamos de agregar)
-                user_message=request.content,
-            )
-
-            # 6. Obtener tools
-            tools = get_rag_tools()
+            # Determinar modelo a usar (override del request o default)
+            model_override = request.model if request.model else None
+            if model_override:
+                logger.info(f"  → Modelo override: {model_override}")
 
             # Variables para tracking
             full_response = ""
             used_rag = False
             sources = []
-            tool_calls_pending = []
+            classification = "general"
 
-            # Determinar modelo a usar (override del request o default)
-            model_override = request.model if request.model else None
-            if model_override:
-                logger.info(f"Usando modelo override: {model_override}")
-
-            # 7. Primera llamada al LLM (puede decidir usar RAG)
-            logger.info("Llamando al LLM (primera iteración)...")
-
-            is_bedrock_no_stream = model_override and ('llama3' in model_override or 'gemma' in model_override)
-            
-            if is_bedrock_no_stream:
-                logger.info('Usando fetch estatico para modelo incompatible con tool call stream')
+            # 4. Clasificación: si hay temas disponibles, clasificar la pregunta
+            if topics:
+                # Notificar al cliente que estamos clasificando
+                logger.info("[ETAPA 4/7] CLASIFICACIÓN — Enviando evento CLASSIFYING al cliente")
                 yield chat_pb2.SendMessageResponse(
-                    chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_TOKEN,
-                    token='[ INFO: El LLM esta generando su respuesta y evaluando hacer uso de RAG (streaming no disponible en AWS Bedrock para esta accion)... ]\n\n',
-                )
-                
-                response = await self.llm.chat_completion(
-                    messages=messages, tools=tools, tool_choice='auto', model=model_override
-                )
-                
-                chunks = []
-                if response.get('content'):
-                    chunks.append({'type': 'content', 'delta': response['content']})
-                
-                if response.get('tool_calls'):
-                    chunks.append({'type': 'tool_call', 'tool_calls': response['tool_calls']})
-                
-                finish_reason = response.get('finish_reason', 'stop')
-                chunks.append({'type': 'done', 'finish_reason': finish_reason})
-                
-                async def gen_chunks():
-                    for c in chunks:
-                        yield c
-                stream_gen = gen_chunks()
-            else:
-                stream_gen = self.llm.chat_completion_stream(
-                    messages=messages, tools=tools, tool_choice='auto', model=model_override
+                    chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_CLASSIFYING,
                 )
 
-            async for chunk in stream_gen:
-                # Contenido de texto
+                classification_messages = create_classification_prompt(topics, request.content)
+                logger.info(f"  → Prompt de clasificación enviado al LLM...")
+
+                classification_response = await self.llm.chat_completion(
+                    messages=classification_messages,
+                    temperature=0.1,
+                    max_tokens=50,
+                    model=model_override,
+                )
+
+                raw_classification = classification_response.get("content", "general")
+                classification = parse_classification_result(raw_classification, topics)
+                logger.info(
+                    f"  → Resultado clasificación: raw='{raw_classification}' → parsed='{classification}'"
+                )
+            else:
+                logger.info("[ETAPA 4/7] CLASIFICACIÓN — Sin temas, clasificado como 'general'")
+
+            # 5. Construir mensajes para el LLM según la clasificación
+            if classification != "general":
+                # === FLUJO RAG ===
+                used_rag = True
+
+                # Notificar al cliente que estamos buscando en documentos
+                logger.info(f"[ETAPA 5/7] RAG — Enviando evento RAG_START al cliente")
+                yield chat_pb2.SendMessageResponse(
+                    chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_RAG_START,
+                )
+
+                # Buscar contexto en la colección clasificada
+                logger.info(f"  → Buscando contexto en colección: '{classification}'...")
+                rag_result = await self.rag.search(
+                    query=request.content,
+                    user_id=request.user_id,
+                    topic=classification,
+                    limit=5,
+                )
+
+                sources = rag_result["sources"]
+                rag_context = rag_result["context"]
+
+                logger.info(
+                    f"  → RAG completado: {len(sources)} fuentes, {len(rag_context)} chars de contexto"
+                )
+                if sources:
+                    logger.info(f"  → Fuentes: {sources}")
+
+                # Notificar al cliente que RAG terminó
+                logger.info(f"  → Enviando evento RAG_DONE al cliente")
+                yield chat_pb2.SendMessageResponse(
+                    chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_RAG_DONE,
+                )
+
+                # Si no se encontró contexto, tratar como general
+                if not rag_context:
+                    logger.info("  → Sin contexto encontrado, respondiendo como general")
+                    used_rag = False
+                    system_message = create_general_system_message()
+                else:
+                    system_message = create_rag_system_message(rag_context, sources)
+            else:
+                # === FLUJO GENERAL (sin RAG) ===
+                logger.info("[ETAPA 5/7] RAG — Omitido (clasificación: general)")
+                system_message = create_general_system_message()
+
+            # 6. Formatear mensajes para el LLM
+            messages = self.llm.format_messages(
+                system_message=system_message,
+                conversation_history=history[:-1],
+                user_message=request.content,
+            )
+            logger.info(f"[ETAPA 6/7] STREAMING — Iniciando streaming de respuesta ({len(messages)} mensajes en contexto)")
+
+            # 7. Streamear respuesta del LLM
+            token_count = 0
+            async for chunk in self.llm.chat_completion_stream(
+                messages=messages,
+                model=model_override,
+            ):
                 if chunk["type"] == "content":
                     full_response += chunk["delta"]
-
-                    # Enviar chunk al cliente
+                    token_count += 1
                     yield chat_pb2.SendMessageResponse(
                         chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_TOKEN,
                         token=chunk["delta"],
                     )
-
-                # Tool call detectado
-                elif chunk["type"] == "tool_call":
-                    logger.info("LLM decidió usar RAG tool")
-                    used_rag = True
-
-                    # Notificar al cliente
-                    yield chat_pb2.SendMessageResponse(
-                        chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_RAG_START
-                    )
-
-                    tool_calls_pending = chunk["tool_calls"]
-
-                # Finalización
                 elif chunk["type"] == "done":
-                    finish_reason = chunk["finish_reason"]
-                    logger.info(f"Primera iteración completada: finish_reason={finish_reason}")
-
-                    # Si hay tool calls, ejecutarlos
-                    if finish_reason == "tool_calls" and tool_calls_pending:
-                        # Ejecutar cada tool call
-                        for tool_call in tool_calls_pending:
-                            function_name = tool_call["function"]["name"]
-                            arguments = json.loads(tool_call["function"]["arguments"])
-
-                            logger.info(f"Ejecutando tool: {function_name} con args: {arguments}")
-
-                            # Ejecutar RAG
-                            if function_name == "search_knowledge_base":
-                                query = arguments.get("query")
-                                topic = arguments.get("topic")
-
-                                rag_result = await self.rag.search(
-                                    query=query, user_id=request.user_id, topic=topic, limit=5
-                                )
-
-                                sources = rag_result["sources"]
-                                context = rag_result["context"]
-
-                                logger.info(f"RAG completado: {len(sources)} fuentes encontradas")
-                                logger.info(f"=== CONTEXTO RAG ENVIADO AL LLM ===\n{context}\n===================================")
-
-                                # Notificar al cliente
-                                yield chat_pb2.SendMessageResponse(
-                                    chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_RAG_DONE
-                                )
-
-                                # Agregar tool result a mensajes
-                                messages.append(
-                                    {
-                                        "role": "assistant",
-                                        "content": None,
-                                        "tool_calls": [
-                                            {
-                                                "id": tool_call["id"],
-                                                "type": "function",
-                                                "function": {
-                                                    "name": function_name,
-                                                    "arguments": tool_call["function"]["arguments"],
-                                                },
-                                            }
-                                        ],
-                                    }
-                                )
-
-                                messages.append(
-                                    {
-                                        "role": "tool",
-                                        "tool_call_id": tool_call["id"],
-                                        "name": function_name,
-                                        "content": format_tool_call_result(
-                                            function_name, rag_result
-                                        ),
-                                    }
-                                )
-
-                        # Segunda llamada al LLM con el contexto de RAG
-                        logger.info("Llamando al LLM (segunda iteración con contexto RAG)...")
-                        full_response = ""  # Reset
-
-                        async for chunk2 in self.llm.chat_completion_stream(
-                            messages=messages,
-                            tools=None,  # No más tools en esta iteración
-                            tool_choice="none",
-                            model=model_override,
-                        ):
-                            if chunk2["type"] == "content":
-                                full_response += chunk2["delta"]
-
-                                # Enviar chunk al cliente
-                                yield chat_pb2.SendMessageResponse(
-                                    chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_TOKEN,
-                                    token=chunk2["delta"],
-                                )
-
-                            elif chunk2["type"] == "done":
-                                logger.info("Segunda iteración completada")
+                    logger.info(f"  → Streaming completado: ~{token_count} chunks enviados, {len(full_response)} chars")
 
             # 8. Guardar respuesta del asistente en DB
+            logger.info("[ETAPA 7/7] GUARDADO — Guardando respuesta en DB")
             assistant_message = await self.repo.create_message(
                 conversation_id=request.conversation_id,
                 role="assistant",
@@ -523,6 +466,7 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                 detail={
                     "conversation_id": request.conversation_id,
                     "used_rag": used_rag,
+                    "classification": classification,
                     "sources_count": len(sources),
                 },
             )
@@ -542,7 +486,15 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                 used_rag=used_rag,
             )
 
-            logger.info(f"Mensaje completado (used_rag={used_rag}, sources={len(sources)})")
+            logger.info(
+                f"{'='*60}\n"
+                f"  CONSULTA COMPLETADA\n"
+                f"  clasificación={classification}\n"
+                f"  used_rag={used_rag}\n"
+                f"  fuentes={len(sources)}\n"
+                f"  respuesta={len(full_response)} chars\n"
+                f"{'='*60}"
+            )
 
         except Exception as e:
             logger.error(f"Error en SendMessage: {e}", exc_info=True)

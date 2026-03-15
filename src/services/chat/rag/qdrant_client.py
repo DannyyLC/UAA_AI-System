@@ -141,24 +141,33 @@ class QdrantManager:
             )
 
             # Formatear resultados
+            # NOTA: el indexer almacena los campos como 'text' y 'source'
             formatted_results = []
             for result in results:
                 formatted_results.append(
                     {
                         "id": result.id,
                         "score": result.score,
-                        "content": result.payload.get("content", ""),
+                        "content": result.payload.get("text", result.payload.get("content", "")),
                         "topic": result.payload.get("topic", ""),
-                        "filename": result.payload.get("filename", ""),
+                        "filename": result.payload.get("source", result.payload.get("filename", "")),
                         "page": result.payload.get("page"),
                         "chunk_index": result.payload.get("chunk_index"),
                     }
                 )
 
-            logger.info(
-                f"Búsqueda en Qdrant: {len(formatted_results)} resultados "
-                f"(user_id={user_id}, topic={topic}, threshold={score_threshold})"
-            )
+            if formatted_results:
+                scores = [r['score'] for r in formatted_results]
+                logger.info(
+                    f"Búsqueda en Qdrant: {len(formatted_results)} resultados "
+                    f"(user_id={user_id}, topic={topic}, threshold={score_threshold}, "
+                    f"scores={[round(s,3) for s in scores]})"
+                )
+            else:
+                logger.info(
+                    f"Búsqueda en Qdrant: 0 resultados "
+                    f"(user_id={user_id}, topic={topic}, threshold={score_threshold})"
+                )
 
             return formatted_results
 

@@ -1,125 +1,136 @@
 """
-Definición de tools (funciones) para function calling del LLM.
+Prompts y utilidades para el flujo de clasificación y respuesta con RAG.
 
-El LLM puede decidir llamar a estas functions cuando lo considere necesario.
+En lugar de depender del function calling del LLM, usamos un flujo fijo:
+1. Clasificar la pregunta del usuario en una colección o "general"
+2. Si es una colección → buscar contexto con RAG → responder con contexto
+3. Si es "general" → responder directamente sin contexto
 """
 
-import json
-from typing import Any, Dict, List
+from typing import List
+
 
 # ============================================================
-# RAG Tool Definition
+# Prompt de Clasificación
 # ============================================================
 
-RAG_SEARCH_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "search_knowledge_base",
-        "description": """
-Busca información relevante en la base de conocimiento del usuario.
-Usa esta función cuando necesites información específica que no conoces,
-especialmente sobre temas académicos, documentos o contenido especializado.
 
-IMPORTANTE: Antes de decidir usar esta función, considera los temas disponibles 
-que se te proporcionaron en el mensaje del sistema. Solo usa esta función si 
-la pregunta está relacionada con alguno de esos temas.
-        """.strip(),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "La consulta o pregunta a buscar en la base de conocimiento",
-                },
-                "topic": {
-                    "type": "string",
-                    "description": """
-El tema/categoría específico donde buscar (ej: 'Matemáticas', 'Física', 'Historia').
-Debe ser uno de los temas disponibles que se te proporcionaron.
-Si no estás seguro, déjalo vacío para buscar en todos los temas.
-                    """.strip(),
-                },
-            },
-            "required": ["query"],
-        },
-    },
-}
-
-
-def get_rag_tools() -> List[Dict[str, Any]]:
+def create_classification_prompt(topics: List[str], user_message: str) -> List[dict]:
     """
-    Retorna la lista de tools disponibles para el LLM.
+    Crea los mensajes para pedirle al LLM que clasifique la pregunta del usuario.
 
-    Returns:
-        Lista de tools en formato OpenAI function calling
-    """
-    return [RAG_SEARCH_TOOL]
-
-
-def format_tool_call_result(tool_name: str, result: Dict[str, Any]) -> str:
-    """
-    Formatea el resultado de una tool call para enviarlo al LLM.
+    El LLM debe responder SOLO con el nombre exacto de la colección o "general".
 
     Args:
-        tool_name: Nombre de la tool
-        result: Resultado de la ejecución de la tool
+        topics: Lista de temas/colecciones disponibles del usuario
+        user_message: Pregunta del usuario
 
     Returns:
-        String formateado para el LLM
+        Lista de mensajes en formato OpenAI
     """
-    if tool_name == "search_knowledge_base":
-        if not result.get("context"):
-            return "No se encontró información relevante en la base de conocimiento."
+    topics_list = "\n".join(f"- {topic}" for topic in topics)
 
-        return result["context"]
+    # Build a few-shot example using the first available topic
+    example_topic = topics[0] if topics else "matemáticas"
+    example_question = f"¿Puedes revisar mis documentos de {example_topic} y resumirlos?"
 
-    return json.dumps(result)
+    system = f"""Eres un clasificador de preguntas. Tu ÚNICA tarea es determinar si la pregunta del usuario está relacionada con alguna de las siguientes colecciones de documentos, o si es una pregunta general.
 
-
-# ============================================================
-# System Message Generator
-# ============================================================
-
-
-def create_system_message_with_topics(topics: List[str]) -> str:
-    """
-    Crea el mensaje del sistema que incluye los temas disponibles.
-
-    Este mensaje se envía ANTES de que el LLM responda, para que sepa
-    qué información tiene disponible en la base de conocimiento.
-
-    Args:
-        topics: Lista de temas únicos disponibles para el usuario
-
-    Returns:
-        Mensaje del sistema formateado
-    """
-    base_message = """
-Eres un asistente académico inteligente de la UAA (Universidad Autónoma de Aguascalientes).
-
-Tu objetivo es ayudar a estudiantes respondiendo sus preguntas de manera clara y precisa.
-    """.strip()
-
-    if not topics:
-        base_message += (
-            "\\n\\nActualmente no hay documentos disponibles en la base de conocimiento."
-        )
-        return base_message
-
-    topics_list = "\\n".join(f"- {topic}" for topic in topics)
-
-    base_message += f"""
-
-TEMAS DISPONIBLES EN LA BASE DE CONOCIMIENTO:
+COLECCIONES DISPONIBLES:
 {topics_list}
 
-INSTRUCCIONES:
-- Si la pregunta del estudiante está relacionada con alguno de estos temas, 
-  usa la función 'search_knowledge_base' para buscar información específica.
-- Si la pregunta NO está relacionada con estos temas o es una pregunta general, 
-  responde directamente sin usar la función.
-- Cuando uses la base de conocimiento, siempre menciona las fuentes consultadas.
-- Si no encuentras información relevante, indícalo claramente y ofrece tu mejor respuesta.
-    """.strip()
+REGLAS ESTRICTAS:
+1. Si la pregunta menciona, hace referencia, o puede responderse con alguna colección → responde ÚNICAMENTE con el nombre EXACTO de esa colección (copiado de la lista).
+2. Si la pregunta NO tiene ninguna relación con ninguna colección → responde ÚNICAMENTE con: general
+3. PROHIBIDO agregar explicaciones, signos de puntuación, comillas, saltos de línea o cualquier otro texto.
+4. Tu respuesta debe ser exactamente UNA línea.
+5. Ante la duda de si una pregunta es relevante para una colección, elige la colección (NO general).
 
-    return base_message
+EJEMPLOS:
+Usuario: {example_question}
+Respuesta: {example_topic}
+
+Usuario: ¿Cuánto es 2 + 2?
+Respuesta: general
+
+Usuario: ¿Qué dice mi documento sobre {example_topic}?
+Respuesta: {example_topic}"""
+
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_message},
+    ]
+
+
+def parse_classification_result(result: str, topics: List[str]) -> str:
+    """
+    Parsea el resultado de la clasificación del LLM.
+
+    Args:
+        result: Texto de respuesta del LLM
+        topics: Lista de temas válidos
+
+    Returns:
+        Nombre de la colección o "general"
+    """
+    cleaned = result.strip().strip('"').strip("'").strip(".").strip()
+
+    # Búsqueda exacta (case-insensitive)
+    for topic in topics:
+        if cleaned.lower() == topic.lower():
+            return topic
+
+    # Búsqueda parcial: si el resultado contiene el nombre del topic
+    for topic in topics:
+        if topic.lower() in cleaned.lower():
+            return topic
+
+    return "general"
+
+
+# ============================================================
+# System Messages para Respuesta
+# ============================================================
+
+
+def create_general_system_message() -> str:
+    """
+    Crea el system message para respuestas generales (sin RAG).
+
+    Returns:
+        Mensaje del sistema
+    """
+    return """Eres un asistente académico inteligente de la UAA (Universidad Autónoma de Aguascalientes).
+
+Tu objetivo es ayudar a estudiantes respondiendo sus preguntas de manera clara y precisa.
+Responde de forma directa y útil."""
+
+
+def create_rag_system_message(context: str, sources: List[str]) -> str:
+    """
+    Crea el system message para respuestas basadas en RAG (con contexto).
+
+    Args:
+        context: Contexto recuperado de la base de conocimiento
+        sources: Lista de fuentes encontradas
+
+    Returns:
+        Mensaje del sistema con el contexto inyectado
+    """
+    sources_text = "\n".join(f"- {s}" for s in sources)
+
+    return f"""Eres un asistente académico inteligente de la UAA (Universidad Autónoma de Aguascalientes).
+
+Tu objetivo es ayudar a estudiantes respondiendo sus preguntas de manera clara y precisa.
+
+CONTEXTO DE LA BASE DE CONOCIMIENTO:
+{context}
+
+FUENTES CONSULTADAS:
+{sources_text}
+
+INSTRUCCIONES:
+- Basa tu respuesta en el contexto proporcionado arriba.
+- Si el contexto no contiene información suficiente para responder, indícalo claramente y ofrece tu mejor respuesta.
+- Menciona las fuentes consultadas cuando sea relevante.
+- Responde de forma clara, organizada y útil para un estudiante."""

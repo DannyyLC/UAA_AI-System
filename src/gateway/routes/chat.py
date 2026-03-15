@@ -291,6 +291,9 @@ async def send_message(
                     # Enviar token de texto
                     yield f"event: token\ndata: {chunk['token']}\n\n"
 
+                elif event_type == "classifying":
+                    yield f"event: classifying\ndata: {{}}\n\n"
+
                 elif event_type == "rag_start":
                     yield f"event: rag_start\ndata: {{}}\n\n"
 

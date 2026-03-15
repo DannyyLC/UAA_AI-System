@@ -152,12 +152,14 @@ class SendMessageResponse(_message.Message):
         CHUNK_TYPE_RAG_DONE: _ClassVar[SendMessageResponse.ChunkType]
         CHUNK_TYPE_DONE: _ClassVar[SendMessageResponse.ChunkType]
         CHUNK_TYPE_ERROR: _ClassVar[SendMessageResponse.ChunkType]
+        CHUNK_TYPE_CLASSIFYING: _ClassVar[SendMessageResponse.ChunkType]
     CHUNK_TYPE_UNSPECIFIED: SendMessageResponse.ChunkType
     CHUNK_TYPE_TOKEN: SendMessageResponse.ChunkType
     CHUNK_TYPE_RAG_START: SendMessageResponse.ChunkType
     CHUNK_TYPE_RAG_DONE: SendMessageResponse.ChunkType
     CHUNK_TYPE_DONE: SendMessageResponse.ChunkType
     CHUNK_TYPE_ERROR: SendMessageResponse.ChunkType
+    CHUNK_TYPE_CLASSIFYING: SendMessageResponse.ChunkType
     CHUNK_TYPE_FIELD_NUMBER: _ClassVar[int]
     TOKEN_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]

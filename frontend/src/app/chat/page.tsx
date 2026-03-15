@@ -18,6 +18,7 @@ interface ModelChatState {
   messages: ChatPanelMessage[];
   isLoading: boolean;
   isSearchingRAG: boolean;
+  isClassifying: boolean;
 }
 
 export default function ChatPage() {
@@ -46,6 +47,7 @@ export default function ChatPage() {
             messages: [],
             isLoading: false,
             isSearchingRAG: false,
+            isClassifying: false,
           }))
         );
       })
@@ -84,6 +86,7 @@ export default function ChatPage() {
         messages: [...s.messages, userMsg],
         isLoading: true,
         isSearchingRAG: false,
+        isClassifying: false,
       }))
     );
 
@@ -103,16 +106,7 @@ export default function ChatPage() {
           }));
         }
 
-        // Add empty assistant message for streaming
-        updateModelState(idx, (s) => ({
-          ...s,
-          messages: [
-            ...s.messages,
-            { role: "assistant", content: "", isStreaming: true },
-          ],
-        }));
-
-        // Stream the response
+        // Stream the response (assistant message will be created on first token)
         const stream = sendMessageStream(convId!, { content, model: state.model.id });
         
         for await (const chunk of stream) {
@@ -120,17 +114,23 @@ export default function ChatPage() {
             updateModelState(idx, (s) => {
               const msgs = [...s.messages];
               const last = msgs[msgs.length - 1];
+              // If there's already an assistant message, append to it
               if (last && last.role === "assistant") {
                 msgs[msgs.length - 1] = {
                   ...last,
                   content: last.content + chunk.token,
                   isStreaming: true,
                 };
+              } else {
+                // First token: create the assistant message
+                msgs.push({ role: "assistant", content: chunk.token, isStreaming: true });
               }
-              return { ...s, messages: msgs };
+              return { ...s, messages: msgs, isClassifying: false, isSearchingRAG: false };
             });
+          } else if (chunk.type === "classifying") {
+            updateModelState(idx, (s) => ({ ...s, isClassifying: true }));
           } else if (chunk.type === "rag_start") {
-            updateModelState(idx, (s) => ({ ...s, isSearchingRAG: true }));
+            updateModelState(idx, (s) => ({ ...s, isClassifying: false, isSearchingRAG: true }));
           } else if (chunk.type === "rag_done") {
             updateModelState(idx, (s) => ({ ...s, isSearchingRAG: false }));
           } else if (chunk.type === "done") {
@@ -140,7 +140,6 @@ export default function ChatPage() {
               if (last && last.role === "assistant") {
                 msgs[msgs.length - 1] = {
                   ...last,
-                  content: chunk.message?.content || last.content,
                   isStreaming: false,
                   used_rag: chunk.used_rag,
                 };
@@ -150,24 +149,32 @@ export default function ChatPage() {
                 messages: msgs,
                 isLoading: false,
                 isSearchingRAG: false,
+                isClassifying: false,
               };
             });
           } else if (chunk.type === "error") {
             updateModelState(idx, (s) => {
               const msgs = [...s.messages];
+              // Add error as a new assistant message or update existing one
               const last = msgs[msgs.length - 1];
               if (last && last.role === "assistant") {
                 msgs[msgs.length - 1] = {
                   ...last,
-                  content: `Error: ${chunk.message || "Error desconocido"}`,
+                  content: last.content || `Error: ${chunk.message || "Error desconocido"}`,
                   isStreaming: false,
                 };
+              } else {
+                msgs.push({
+                  role: "assistant",
+                  content: `Error: ${chunk.message || "Error desconocido"}`,
+                });
               }
               return {
                 ...s,
                 messages: msgs,
                 isLoading: false,
                 isSearchingRAG: false,
+                isClassifying: false,
               };
             });
           }
@@ -255,6 +262,7 @@ export default function ChatPage() {
                   messages={state.messages}
                   isLoading={state.isLoading}
                   isSearchingRAG={state.isSearchingRAG}
+                  isClassifying={state.isClassifying}
                 />
               ))
             )}

@@ -104,7 +104,7 @@ class RAGRetriever:
                 user_id=user_id,
                 topic=topic,
                 limit=limit,
-                score_threshold=0.7,
+                score_threshold=0.5,
             )
 
             if not chunks:

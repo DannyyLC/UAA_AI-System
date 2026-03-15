@@ -269,6 +269,10 @@ class ChatClient:
                 if response.chunk_type == chat_pb2.SendMessageResponse.CHUNK_TYPE_TOKEN:
                     yield {"type": "token", "token": response.token}
 
+                # Clasificando pregunta
+                elif response.chunk_type == chat_pb2.SendMessageResponse.CHUNK_TYPE_CLASSIFYING:
+                    yield {"type": "classifying"}
+
                 # RAG iniciado
                 elif response.chunk_type == chat_pb2.SendMessageResponse.CHUNK_TYPE_RAG_START:
                     yield {"type": "rag_start"}
