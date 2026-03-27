@@ -248,7 +248,7 @@ class EmbeddingsGenerator:
 
         embeddings = await self.generate_batch(chunks, show_progress=show_progress)
 
-        logger.info(f"✅ {len(embeddings)} embeddings generados " f"(dimensión: {self.dimension})")
+        logger.info(f"{len(embeddings)} embeddings generados (dimensión: {self.dimension})")
 
         return embeddings
 

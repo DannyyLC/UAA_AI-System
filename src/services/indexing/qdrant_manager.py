@@ -78,7 +78,8 @@ class QdrantIndexer:
         except (UnexpectedResponse, Exception):
             # Colección no existe, crearla
             logger.info(
-                f"Creando colección '{self.collection_name}' " f"(vector_size={self.vector_size})"
+                f"Creando colección '{self.collection_name}' "
+                f"(vector_size={self.vector_size})"
             )
 
             self.client.create_collection(
@@ -94,7 +95,7 @@ class QdrantIndexer:
                 # Se crean automáticamente para campos usados en filtros
             )
 
-            logger.info(f"✅ Colección '{self.collection_name}' creada")
+            logger.info(f"Colección '{self.collection_name}' creada")
 
     def index_chunks(
         self,
@@ -183,7 +184,7 @@ class QdrantIndexer:
                 raise
 
         logger.info(
-            f"✅ {total_indexed} chunks indexados en Qdrant "
+            f"{total_indexed} chunks indexados en Qdrant "
             f"(job={job_id}, user={user_id}, topic={topic})"
         )
 
@@ -232,7 +233,7 @@ class QdrantIndexer:
                 wait=True,
             )
 
-            logger.info(f"🗑️  {len(point_ids)} chunks eliminados (job={job_id})")
+            logger.info(f"{len(point_ids)} chunks eliminados (job={job_id})")
 
             return len(point_ids)
 
@@ -288,7 +289,7 @@ class QdrantIndexer:
             )
 
             logger.info(
-                f"🗑️  {len(point_ids)} chunks eliminados " f"(user={user_id}, topic={topic})"
+                f"{len(point_ids)} chunks eliminados (user={user_id}, topic={topic})"
             )
 
             return len(point_ids)

@@ -36,7 +36,7 @@ class WorkerLauncher:
 
     async def start(self) -> None:
         """Inicia todos los workers."""
-        logger.info(f"🚀 Lanzando {self.num_workers} indexing workers...")
+        logger.info(f"Lanzando {self.num_workers} indexing workers...")
 
         self.running = True
 
@@ -49,7 +49,7 @@ class WorkerLauncher:
             task = asyncio.create_task(worker.start(), name=f"worker-{i}")
             self.tasks.append(task)
 
-        logger.info(f"✅ {self.num_workers} workers lanzados")
+        logger.info(f"{self.num_workers} workers lanzados")
 
         # Esperar a que terminen (o sean cancelados)
         try:
@@ -61,7 +61,7 @@ class WorkerLauncher:
 
     async def stop(self) -> None:
         """Detiene todos los workers gracefully."""
-        logger.info("🛑 Deteniendo todos los workers...")
+        logger.info("Deteniendo todos los workers...")
 
         self.running = False
 
@@ -77,7 +77,7 @@ class WorkerLauncher:
         for worker in self.workers:
             await worker.stop()
 
-        logger.info("✅ Todos los workers detenidos")
+        logger.info("Todos los workers detenidos")
 
 
 async def main():
@@ -85,7 +85,7 @@ async def main():
     # Número de workers desde env o default
     num_workers = int(os.getenv("INDEXING_WORKERS", "2"))
 
-    logger.info(f"🚀 Iniciando sistema de indexación con {num_workers} workers")
+    logger.info(f"Iniciando sistema de indexación con {num_workers} workers")
 
     launcher = WorkerLauncher(num_workers=num_workers)
 

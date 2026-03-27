@@ -93,6 +93,9 @@ class ChatClient:
         except grpc.RpcError as e:
             logger.error(f"Error gRPC en create_conversation: {e.code()} - {e.details()}")
             return {"success": False, "error": {"code": str(e.code()), "message": e.details()}}
+        except Exception as e:
+            logger.error(f"Error inesperado en create_conversation: {type(e).__name__} - {str(e)}", exc_info=True)
+            return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": f"Error interno: {str(e)}"}}
 
     async def list_conversations(self, user_id: str, page: int = 1, page_size: int = 50) -> dict:
         """
@@ -146,6 +149,9 @@ class ChatClient:
         except grpc.RpcError as e:
             logger.error(f"Error gRPC en list_conversations: {e.code()} - {e.details()}")
             return {"success": False, "error": {"code": str(e.code()), "message": e.details()}}
+        except Exception as e:
+            logger.error(f"Error inesperado en list_conversations: {type(e).__name__} - {str(e)}", exc_info=True)
+            return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": f"Error interno: {str(e)}"}}
 
     async def get_conversation(self, conversation_id: str, user_id: str) -> dict:
         """
@@ -200,6 +206,9 @@ class ChatClient:
         except grpc.RpcError as e:
             logger.error(f"Error gRPC en get_conversation: {e.code()} - {e.details()}")
             return {"success": False, "error": {"code": str(e.code()), "message": e.details()}}
+        except Exception as e:
+            logger.error(f"Error inesperado en get_conversation: {type(e).__name__} - {str(e)}", exc_info=True)
+            return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": f"Error interno: {str(e)}"}}
 
     async def delete_conversation(self, conversation_id: str, user_id: str) -> dict:
         """
@@ -230,6 +239,9 @@ class ChatClient:
         except grpc.RpcError as e:
             logger.error(f"Error gRPC en delete_conversation: {e.code()} - {e.details()}")
             return {"success": False, "error": {"code": str(e.code()), "message": e.details()}}
+        except Exception as e:
+            logger.error(f"Error inesperado en delete_conversation: {type(e).__name__} - {str(e)}", exc_info=True)
+            return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": f"Error interno: {str(e)}"}}
 
     # ============================================================
     # Mensajes
@@ -307,6 +319,9 @@ class ChatClient:
         except grpc.RpcError as e:
             logger.error(f"Error gRPC en send_message_stream: {e.code()} - {e.details()}")
             yield {"type": "error", "error": {"code": str(e.code()), "message": e.details()}}
+        except Exception as e:
+            logger.error(f"Error inesperado en send_message_stream: {type(e).__name__} - {str(e)}", exc_info=True)
+            yield {"type": "error", "error": {"code": "INTERNAL_ERROR", "message": f"Error interno: {str(e)}"}}
 
     async def get_user_topics(self, user_id: str) -> dict:
         """
@@ -334,6 +349,9 @@ class ChatClient:
         except grpc.RpcError as e:
             logger.error(f"Error gRPC en get_user_topics: {e.code()} - {e.details()}")
             return {"success": False, "error": {"code": str(e.code()), "message": e.details()}}
+        except Exception as e:
+            logger.error(f"Error inesperado en get_user_topics: {type(e).__name__} - {str(e)}", exc_info=True)
+            return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": f"Error interno: {str(e)}"}}
 
     # ============================================================
     # Utilidades
@@ -343,8 +361,15 @@ class ChatClient:
         """Convierte timestamp proto a string ISO."""
         from datetime import datetime, timezone
 
-        dt = datetime.fromtimestamp(timestamp.seconds, tz=timezone.utc)
-        return dt.isoformat()
+        try:
+            # Asegurar que seconds es un entero
+            seconds = int(timestamp.seconds) if isinstance(timestamp.seconds, str) else timestamp.seconds
+            dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
+            return dt.isoformat()
+        except (ValueError, TypeError, OSError) as e:
+            logger.error(f"Error convirtiendo timestamp: {e}, timestamp.seconds={timestamp.seconds}")
+            # Retornar timestamp actual como fallback
+            return datetime.now(timezone.utc).isoformat()
 
     def _message_role_to_str(self, role: int) -> str:
         """Convierte enum de rol a string."""

@@ -78,7 +78,7 @@ class IndexingWorker:
 
     async def start(self) -> None:
         """Inicia el worker y sus dependencias."""
-        logger.info(f"🚀 Iniciando worker #{self.worker_id}...")
+        logger.info(f"Iniciando worker #{self.worker_id}...")
 
         try:
             # Conectar a base de datos
@@ -86,19 +86,19 @@ class IndexingWorker:
             await self.db.connect()
             await self.db.init_schema()
             self.repo = IndexingRepository(self.db)
-            logger.info("✅ Conectado a PostgreSQL")
+            logger.info("Conectado a PostgreSQL")
 
             # Inicializar generador de embeddings
             self.embeddings = EmbeddingsGenerator(
                 batch_size=100,
                 max_retries=3,
             )
-            logger.info("✅ Embeddings generator inicializado")
+            logger.info("Embeddings generator inicializado")
 
             # Conectar a Qdrant
             self.qdrant = QdrantIndexer()
             self.qdrant.connect()
-            logger.info("✅ Conectado a Qdrant")
+            logger.info("Conectado a Qdrant")
 
             # Crear consumer de Kafka
             self.consumer = AIOKafkaConsumer(
@@ -114,10 +114,10 @@ class IndexingWorker:
             )
 
             await self.consumer.start()
-            logger.info(f"✅ Kafka consumer iniciado: {self.topic}")
+            logger.info(f"Kafka consumer iniciado: {self.topic}")
 
             self.running = True
-            logger.info(f"✅ Worker #{self.worker_id} listo para procesar jobs")
+            logger.info(f"Worker #{self.worker_id} listo para procesar jobs")
 
             # Iniciar loop de consumo
             await self.consume_loop()
@@ -129,7 +129,7 @@ class IndexingWorker:
 
     async def stop(self) -> None:
         """Detiene el worker y limpia recursos."""
-        logger.info(f"🛑 Deteniendo worker #{self.worker_id}...")
+        logger.info(f"Deteniendo worker #{self.worker_id}...")
 
         self.running = False
 
@@ -142,7 +142,7 @@ class IndexingWorker:
         if self.db:
             await self.db.disconnect()
 
-        logger.info(f"✅ Worker #{self.worker_id} detenido")
+        logger.info(f"Worker #{self.worker_id} detenido")
 
     async def consume_loop(self) -> None:
         """Loop principal de consumo de mensajes."""
@@ -176,7 +176,7 @@ class IndexingWorker:
         data = message.value
         job_id = data.get("job_id")
 
-        logger.info(f"📨 Worker #{self.worker_id} procesando job {job_id}")
+        logger.info(f"Worker #{self.worker_id} procesando job {job_id}")
 
         try:
             # Verificar que el job existe y no está cancelado
@@ -203,7 +203,7 @@ class IndexingWorker:
             if success:
                 # Commit offset solo si fue exitoso
                 await self.consumer.commit()
-                logger.info(f"✅ Job {job_id} procesado y committed")
+                logger.info(f"Job {job_id} procesado y committed")
             else:
                 # No commit, Kafka reintentará
                 logger.warning(f"Job {job_id} falló, no committing (Kafka reintentará)")
@@ -288,7 +288,7 @@ class IndexingWorker:
                 raise ValueError("No se generaron chunks del documento")
 
             chunks_text = [chunk.text for chunk in chunks_objects]
-            logger.info(f"✅ {len(chunks_text)} chunks creados")
+            logger.info(f"{len(chunks_text)} chunks creados")
 
             # 5. Generar embeddings
             logger.info(f"Generando embeddings...")
@@ -317,11 +317,11 @@ class IndexingWorker:
                 },
             )
 
-            logger.info(f"✅ {indexed_count} chunks indexados en Qdrant")
+            logger.info(f"{indexed_count} chunks indexados en Qdrant")
 
             # 7. Actualizar job como completado
             await self.repo.mark_completed(job_id, len(chunks_text))
-            logger.info(f"✅ Job {job_id} → COMPLETED")
+            logger.info(f"Job {job_id} → COMPLETED")
 
             # 8. Limpiar archivo temporal
             try:
@@ -329,12 +329,12 @@ class IndexingWorker:
                 # Intentar limpiar directorios vacíos
                 if file_path.parent.exists() and not any(file_path.parent.iterdir()):
                     file_path.parent.rmdir()
-                logger.info(f"🗑️  Archivo temporal eliminado: {file_path}")
+                logger.info(f"Archivo temporal eliminado: {file_path}")
             except Exception as e:
                 logger.warning(f"No se pudo eliminar archivo temporal: {e}")
 
             logger.info(
-                f"🎉 Job {job_id} completado exitosamente: " f"{len(chunks_text)} chunks indexados"
+                f"Job {job_id} completado exitosamente: {len(chunks_text)} chunks indexados"
             )
 
             return True
@@ -394,7 +394,7 @@ if __name__ == "__main__":
 
     worker_id = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 
-    logger.info(f"🚀 Iniciando Indexing Worker #{worker_id}")
+    logger.info(f"Iniciando Indexing Worker #{worker_id}")
 
     try:
         asyncio.run(run_worker(worker_id))

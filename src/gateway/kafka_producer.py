@@ -119,7 +119,7 @@ class IndexingProducer:
             record_metadata = await future
 
             logger.info(
-                f"📤 Job {job_id} publicado en Kafka "
+                f"Job {job_id} publicado en Kafka "
                 f"(topic={record_metadata.topic}, "
                 f"partition={record_metadata.partition}, "
                 f"offset={record_metadata.offset})"
@@ -182,7 +182,7 @@ class IndexingProducer:
 
             await future
 
-            logger.warning(f"🔄 Job {job_id} reencolado para reintento #{retry_count}")
+            logger.warning(f"Job {job_id} reencolado para reintento #{retry_count}")
 
             return True
 
@@ -228,7 +228,7 @@ class IndexingProducer:
 
             await future
 
-            logger.error(f"💀 Job {job_id} enviado a DLQ: {error}")
+            logger.error(f"Job {job_id} enviado a DLQ: {error}")
 
             return True
 

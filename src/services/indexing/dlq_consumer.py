@@ -40,13 +40,13 @@ class DLQConsumer:
 
     async def start(self) -> None:
         """Inicia el consumer."""
-        logger.info("🚀 Iniciando DLQ Consumer...")
+        logger.info("Iniciando DLQ Consumer...")
 
         try:
             # Conectar a base de datos
             self.db = DatabaseManager()
             await self.db.connect()
-            logger.info("✅ Conectado a PostgreSQL")
+            logger.info("Conectado a PostgreSQL")
 
             # Crear consumer de Kafka
             self.consumer = AIOKafkaConsumer(
@@ -59,7 +59,7 @@ class DLQConsumer:
             )
 
             await self.consumer.start()
-            logger.info(f"✅ DLQ Consumer iniciado: {self.topic}")
+            logger.info(f"DLQ Consumer iniciado: {self.topic}")
 
             self.running = True
 
@@ -73,7 +73,7 @@ class DLQConsumer:
 
     async def stop(self) -> None:
         """Detiene el consumer."""
-        logger.info("🛑 Deteniendo DLQ Consumer...")
+        logger.info("Deteniendo DLQ Consumer...")
 
         self.running = False
 
@@ -83,7 +83,7 @@ class DLQConsumer:
         if self.db:
             await self.db.disconnect()
 
-        logger.info("✅ DLQ Consumer detenido")
+        logger.info("DLQ Consumer detenido")
 
     async def consume_loop(self) -> None:
         """Loop principal de consumo."""
@@ -118,7 +118,7 @@ class DLQConsumer:
         failed_at = data.get("failed_at")
 
         logger.error(
-            f"💀 DLQ: Job {job_id} falló permanentemente\n"
+            f"DLQ: Job {job_id} falló permanentemente\n"
             f"   Error: {error}\n"
             f"   Fallado en: {failed_at}\n"
             f"   Usuario: {original_message.get('user_id')}\n"
@@ -149,7 +149,7 @@ class DLQConsumer:
                 datetime.now(timezone.utc),
             )
 
-            logger.info(f"📝 Mensaje DLQ registrado en audit log")
+            logger.info(f"Mensaje DLQ registrado en audit log")
 
         except Exception as e:
             logger.error(f"Error registrando en audit log: {e}")
@@ -171,7 +171,7 @@ async def run_dlq_consumer() -> None:
 
 if __name__ == "__main__":
     """Ejecutar DLQ consumer standalone."""
-    logger.info("🚀 Iniciando DLQ Consumer")
+    logger.info("Iniciando DLQ Consumer")
 
     try:
         asyncio.run(run_dlq_consumer())
