@@ -19,6 +19,7 @@ interface ModelChatState {
   isLoading: boolean;
   isSearchingRAG: boolean;
   isClassifying: boolean;
+  isResearching: boolean;
 }
 
 export default function ChatPage() {
@@ -48,6 +49,7 @@ export default function ChatPage() {
             isLoading: false,
             isSearchingRAG: false,
             isClassifying: false,
+            isResearching: false,
           }))
         );
       })
@@ -87,6 +89,7 @@ export default function ChatPage() {
         isLoading: true,
         isSearchingRAG: false,
         isClassifying: false,
+        isResearching: false,
       }))
     );
 
@@ -125,12 +128,14 @@ export default function ChatPage() {
                 // First token: create the assistant message
                 msgs.push({ role: "assistant", content: chunk.token, isStreaming: true });
               }
-              return { ...s, messages: msgs, isClassifying: false, isSearchingRAG: false };
+              return { ...s, messages: msgs, isClassifying: false, isSearchingRAG: false, isResearching: false };
             });
           } else if (chunk.type === "classifying") {
             updateModelState(idx, (s) => ({ ...s, isClassifying: true }));
+          } else if (chunk.type === "researching") {
+            updateModelState(idx, (s) => ({ ...s, isClassifying: false, isResearching: true }));
           } else if (chunk.type === "rag_start") {
-            updateModelState(idx, (s) => ({ ...s, isClassifying: false, isSearchingRAG: true }));
+            updateModelState(idx, (s) => ({ ...s, isClassifying: false, isResearching: false, isSearchingRAG: true }));
           } else if (chunk.type === "rag_done") {
             updateModelState(idx, (s) => ({ ...s, isSearchingRAG: false }));
           } else if (chunk.type === "done") {
@@ -150,6 +155,7 @@ export default function ChatPage() {
                 isLoading: false,
                 isSearchingRAG: false,
                 isClassifying: false,
+                isResearching: false,
               };
             });
           } else if (chunk.type === "error") {
@@ -175,6 +181,7 @@ export default function ChatPage() {
                 isLoading: false,
                 isSearchingRAG: false,
                 isClassifying: false,
+                isResearching: false,
               };
             });
           }
@@ -263,6 +270,7 @@ export default function ChatPage() {
                   isLoading={state.isLoading}
                   isSearchingRAG={state.isSearchingRAG}
                   isClassifying={state.isClassifying}
+                  isResearching={state.isResearching}
                 />
               ))
             )}

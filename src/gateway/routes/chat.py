@@ -294,6 +294,9 @@ async def send_message(
                 elif event_type == "classifying":
                     yield f"event: classifying\ndata: {{}}\n\n"
 
+                elif event_type == "researching":
+                    yield f"event: researching\ndata: {{}}\n\n"
+
                 elif event_type == "rag_start":
                     yield f"event: rag_start\ndata: {{}}\n\n"
 

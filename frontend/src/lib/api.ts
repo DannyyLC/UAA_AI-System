@@ -101,6 +101,7 @@ export async function getModels(): Promise<LLMModel[]> {
 export type ChatStreamChunk =
   | { type: "token"; token: string }
   | { type: "classifying" }
+  | { type: "researching" }
   | { type: "rag_start" }
   | { type: "rag_done" }
   | { type: "done"; message: ChatPanelMessage; used_rag: boolean }
@@ -160,6 +161,8 @@ export async function* sendMessageStream(
         yield { type: "token", token: dataStr };
       } else if (eventType === "classifying") {
         yield { type: "classifying" };
+      } else if (eventType === "researching") {
+        yield { type: "researching" };
       } else if (eventType === "rag_start") {
         yield { type: "rag_start" };
       } else if (eventType === "rag_done") {

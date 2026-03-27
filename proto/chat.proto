@@ -137,6 +137,7 @@ message SendMessageResponse {
     CHUNK_TYPE_DONE = 4; // Respuesta completa
     CHUNK_TYPE_ERROR = 5; // Error durante generación
     CHUNK_TYPE_CLASSIFYING = 6; // Clasificando la pregunta del usuario
+    CHUNK_TYPE_RESEARCHING = 7; // Generando plan de investigación
   }
 
   ChunkType chunk_type = 1;

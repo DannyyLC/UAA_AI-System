@@ -285,6 +285,10 @@ class ChatClient:
                 elif response.chunk_type == chat_pb2.SendMessageResponse.CHUNK_TYPE_CLASSIFYING:
                     yield {"type": "classifying"}
 
+                # Generando plan de investigación
+                elif response.chunk_type == chat_pb2.SendMessageResponse.CHUNK_TYPE_RESEARCHING:
+                    yield {"type": "researching"}
+
                 # RAG iniciado
                 elif response.chunk_type == chat_pb2.SendMessageResponse.CHUNK_TYPE_RAG_START:
                     yield {"type": "rag_start"}

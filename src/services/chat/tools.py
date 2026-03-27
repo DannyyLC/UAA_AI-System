@@ -7,6 +7,8 @@ En lugar de depender del function calling del LLM, usamos un flujo fijo:
 3. Si es "general" → responder directamente sin contexto
 """
 
+import json
+import re
 from typing import List
 
 
@@ -86,6 +88,80 @@ def parse_classification_result(result: str, topics: List[str]) -> str:
             return topic
 
     return "general"
+
+
+# ============================================================
+# Plan de Investigación
+# ============================================================
+
+
+def create_research_plan_prompt(user_message: str, topic: str) -> List[dict]:
+    """
+    Crea los mensajes para pedirle al LLM que genere un plan de investigación
+    con 3 sub-preguntas orientadas a buscar contexto en la base documental.
+
+    Args:
+        user_message: Pregunta original del usuario
+        topic: Colección/tema en la que se va a buscar
+
+    Returns:
+        Lista de mensajes en formato OpenAI
+    """
+    system = f"""Eres un asistente de investigación académica. Tu tarea es descomponer la pregunta del usuario en exactamente 3 sub-preguntas de búsqueda que permitan recuperar la información más relevante de una base de documentos sobre "{topic}".
+
+REGLAS:
+1. Genera exactamente 3 preguntas.
+2. Cada pregunta debe cubrir un aspecto distinto de la pregunta original.
+3. Las preguntas deben ser específicas y orientadas a buscar fragmentos relevantes en documentos académicos.
+4. Responde ÚNICAMENTE con un JSON array de 3 strings.
+5. No agregues explicaciones, solo el JSON.
+
+EJEMPLO DE FORMATO:
+["¿Cuál es la definición de X?", "¿Cuáles son las propiedades principales de X?", "¿Qué ejemplos o aplicaciones tiene X?"]"""
+
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_message},
+    ]
+
+
+def parse_research_plan(response: str) -> List[str]:
+    """
+    Extrae las 3 sub-preguntas del plan de investigación generado por el LLM.
+
+    Args:
+        response: Texto de respuesta del LLM (esperado: JSON array de strings)
+
+    Returns:
+        Lista de 3 sub-preguntas. Si el parseo falla, devuelve la pregunta original
+        replicada 3 veces como fallback.
+    """
+    cleaned = response.strip()
+
+    # Intentar extraer JSON array del texto
+    match = re.search(r'\[.*?\]', cleaned, re.DOTALL)
+    if match:
+        try:
+            questions = json.loads(match.group())
+            if isinstance(questions, list) and len(questions) >= 3:
+                return [str(q) for q in questions[:3]]
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Fallback: intentar separar por líneas numeradas
+    lines = [line.strip() for line in cleaned.split('\n') if line.strip()]
+    questions = []
+    for line in lines:
+        # Remover numeración como "1.", "1)", "- "
+        clean_line = re.sub(r'^[\d]+[.)\-]\s*', '', line).strip()
+        clean_line = re.sub(r'^[-•]\s*', '', clean_line).strip()
+        if clean_line and clean_line.startswith('¿') or clean_line.endswith('?'):
+            questions.append(clean_line)
+
+    if len(questions) >= 3:
+        return questions[:3]
+
+    return []
 
 
 # ============================================================

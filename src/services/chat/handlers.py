@@ -22,7 +22,9 @@ from src.services.chat.tools import (
     create_classification_prompt,
     create_general_system_message,
     create_rag_system_message,
+    create_research_plan_prompt,
     parse_classification_result,
+    parse_research_plan,
 )
 from src.shared.logging_utils import get_logger
 from src.shared.utils import datetime_to_proto_timestamp, generate_id
@@ -382,26 +384,85 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                 # === FLUJO RAG ===
                 used_rag = True
 
+                # Notificar al cliente que estamos generando plan de investigación
+                logger.info(f"[ETAPA 5/7] RAG — Generando plan de investigación")
+                yield chat_pb2.SendMessageResponse(
+                    chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_RESEARCHING,
+                )
+
+                # Generar plan de investigación (3 sub-preguntas)
+                research_plan_messages = create_research_plan_prompt(
+                    request.content, classification
+                )
+                logger.info(f"  → Solicitando plan de investigación al LLM...")
+
+                research_plan_response = await self.llm.chat_completion(
+                    messages=research_plan_messages,
+                    temperature=0.3,
+                    max_tokens=300,
+                    model=model_override,
+                )
+
+                raw_plan = research_plan_response.get("content", "")
+                research_questions = parse_research_plan(raw_plan)
+
+                # Fallback: si no se pudieron parsear las preguntas, usar la pregunta original
+                if not research_questions:
+                    logger.warning("  → No se pudo parsear el plan, usando pregunta original")
+                    research_questions = [request.content]
+
+                logger.info(
+                    f"  → Plan de investigación ({len(research_questions)} preguntas): "
+                    f"{research_questions}"
+                )
+
                 # Notificar al cliente que estamos buscando en documentos
-                logger.info(f"[ETAPA 5/7] RAG — Enviando evento RAG_START al cliente")
+                logger.info(f"  → Enviando evento RAG_START al cliente")
                 yield chat_pb2.SendMessageResponse(
                     chunk_type=chat_pb2.SendMessageResponse.CHUNK_TYPE_RAG_START,
                 )
 
-                # Buscar contexto en la colección clasificada
-                logger.info(f"  → Buscando contexto en colección: '{classification}'...")
-                rag_result = await self.rag.search(
-                    query=request.content,
-                    user_id=request.user_id,
-                    topic=classification,
-                    limit=5,
+                # Buscar contexto para cada sub-pregunta
+                import asyncio
+
+                async def search_question(question: str):
+                    return await self.rag.search(
+                        query=question,
+                        user_id=request.user_id,
+                        topic=classification,
+                        limit=5,
+                    )
+
+                rag_results = await asyncio.gather(
+                    *[search_question(q) for q in research_questions]
                 )
 
-                sources = rag_result["sources"]
-                rag_context = rag_result["context"]
+                # Combinar contextos y fuentes de todas las búsquedas
+                all_contexts = []
+                all_sources = []
+                seen_chunks = set()
+
+                for result in rag_results:
+                    for chunk in result.get("chunks", []):
+                        # Deduplicar por contenido
+                        chunk_key = chunk["content"][:100]
+                        if chunk_key not in seen_chunks:
+                            seen_chunks.add(chunk_key)
+                            source = chunk["filename"]
+                            if chunk.get("page"):
+                                source += f" (p.{chunk['page']})"
+                            all_sources.append(source)
+                            all_contexts.append(
+                                f"[Documento {len(all_contexts) + 1}: {source}]\n"
+                                f"{chunk['content']}\n"
+                            )
+
+                sources = list(dict.fromkeys(all_sources))
+                rag_context = "\n".join(all_contexts)
 
                 logger.info(
-                    f"  → RAG completado: {len(sources)} fuentes, {len(rag_context)} chars de contexto"
+                    f"  → RAG completado: {len(sources)} fuentes, "
+                    f"{len(all_contexts)} chunks únicos, {len(rag_context)} chars de contexto"
                 )
                 if sources:
                     logger.info(f"  → Fuentes: {sources}")
