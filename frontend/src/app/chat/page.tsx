@@ -251,6 +251,13 @@ export default function ChatPage() {
           </span>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={handleClear}
+            disabled={sending || chatStates.every((s) => s.messages.length === 0)}
+            className="rounded-lg bg-red-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Limpiar conversación
+          </button>
           <span className="text-sm text-gray-300">
             {user.full_name || user.email}
           </span>
@@ -295,16 +302,6 @@ export default function ChatPage() {
           {/* Input area */}
           <div className="border-t border-gray-800 bg-gray-900 p-4">
             <div className="mx-auto flex max-w-5xl items-end gap-3">
-              <button
-                onClick={handleClear}
-                disabled={sending || chatStates.every((s) => s.messages.length === 0)}
-                className="rounded-xl bg-gray-700 px-3 py-3 text-xs font-medium text-gray-300 transition hover:bg-gray-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                title="Limpiar conversación"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
               <textarea
                 ref={inputRef}
                 value={input}
