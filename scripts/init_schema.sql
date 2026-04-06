@@ -98,6 +98,28 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
 
 -- ============================================================
+-- ESTADÍSTICAS DE RENDIMIENTO DE MODELOS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS model_performance_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    expected_answer TEXT,                            -- Pendiente de implementar
+    collection_name VARCHAR(255),                    -- Nombre de la colección / topic (NULL si general)
+    model VARCHAR(255) NOT NULL,
+    response_time_ms DOUBLE PRECISION NOT NULL,      -- Tiempo de respuesta en milisegundos
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_model_perf_model ON model_performance_logs(model);
+CREATE INDEX IF NOT EXISTS idx_model_perf_collection ON model_performance_logs(collection_name);
+CREATE INDEX IF NOT EXISTS idx_model_perf_created_at ON model_performance_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_model_perf_user_id ON model_performance_logs(user_id);
+
+-- ============================================================
 -- ADMIN SEED (usuario admin por defecto)
 -- Password: admin123 (bcrypt hash) — CAMBIAR EN PRODUCCIÓN
 -- ============================================================

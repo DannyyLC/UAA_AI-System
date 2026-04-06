@@ -343,3 +343,52 @@ class ChatRepository:
             user_id,
         )
         return [row["topic"] for row in rows]
+
+    # ================================================================
+    # MODEL PERFORMANCE LOGS
+    # ================================================================
+
+    async def insert_performance_log(
+        self,
+        question: str,
+        answer: str,
+        collection_name: Optional[str],
+        model: str,
+        response_time_ms: float,
+        user_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        expected_answer: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Registra una entrada de rendimiento de modelo.
+
+        Args:
+            question: Pregunta del usuario
+            answer: Respuesta generada por el modelo
+            collection_name: Colección/topic usada (None si general)
+            model: Identificador del modelo
+            response_time_ms: Tiempo de respuesta en milisegundos
+            user_id: ID del usuario
+            conversation_id: ID de la conversación
+            expected_answer: Respuesta esperada (pendiente de implementar)
+
+        Returns:
+            Registro insertado
+        """
+        row = await self.db.fetchone(
+            """
+            INSERT INTO model_performance_logs
+                (question, answer, expected_answer, collection_name, model, response_time_ms, user_id, conversation_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid)
+            RETURNING id, created_at
+            """,
+            question,
+            answer,
+            expected_answer,
+            collection_name,
+            model,
+            response_time_ms,
+            user_id,
+            conversation_id,
+        )
+        return dict(row) if row else None

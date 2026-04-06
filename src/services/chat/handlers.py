@@ -9,6 +9,7 @@ Orquesta:
 - Eventos de auditoría
 """
 
+import time
 from typing import AsyncGenerator, Optional
 
 import grpc
@@ -326,6 +327,9 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                 )
                 return
 
+            # Iniciar timer de rendimiento
+            perf_start = time.perf_counter()
+
             # 1. Guardar mensaje del usuario
             user_message = await self.repo.create_message(
                 conversation_id=request.conversation_id, role="user", content=request.content
@@ -509,6 +513,10 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                 elif chunk["type"] == "done":
                     logger.info(f"  → Streaming completado: ~{token_count} chunks enviados, {len(full_response)} chars")
 
+            # Calcular tiempo de respuesta
+            perf_end = time.perf_counter()
+            response_time_ms = (perf_end - perf_start) * 1000
+
             # 8. Guardar respuesta del asistente en DB
             logger.info("[ETAPA 7/7] GUARDADO — Guardando respuesta en DB")
             assistant_message = await self.repo.create_message(
@@ -518,6 +526,23 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                 used_rag=used_rag,
                 sources=sources,
             )
+
+            # Guardar log de rendimiento
+            resolved_model = model_override or self.llm.model or "unknown"
+            try:
+                await self.repo.insert_performance_log(
+                    question=request.content,
+                    answer=full_response,
+                    collection_name=classification if classification != "general" else None,
+                    model=resolved_model,
+                    response_time_ms=response_time_ms,
+                    user_id=request.user_id,
+                    conversation_id=request.conversation_id,
+                    expected_answer=None,
+                )
+                logger.info(f"  → Performance log guardado: modelo={resolved_model}, tiempo={response_time_ms:.1f}ms")
+            except Exception as perf_err:
+                logger.warning(f"No se pudo guardar performance log: {perf_err}")
 
             # Auditoría
             await self.audit.send_event(
