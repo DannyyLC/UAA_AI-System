@@ -32,35 +32,40 @@ def create_classification_prompt(topics: List[str], user_message: str) -> List[d
     """
     topics_list = "\n".join(f"- {topic}" for topic in topics)
 
-    # Build a few-shot example using the first available topic
+    # Build few-shot examples using available topics
     example_topic = topics[0] if topics else "matemáticas"
-    example_question = f"¿Puedes revisar mis documentos de {example_topic} y resumirlos?"
+    second_topic = topics[1] if len(topics) > 1 else "historia"
 
-    system = f"""Eres un clasificador de preguntas. Tu ÚNICA tarea es determinar si la pregunta del usuario está relacionada con alguna de las siguientes colecciones de documentos, o si es una pregunta general.
+    system = f"""Clasifica la pregunta del usuario. Responde con UNA SOLA PALABRA: el nombre exacto de la colección o "general".
 
-COLECCIONES DISPONIBLES:
+COLECCIONES:
 {topics_list}
 
-REGLAS ESTRICTAS:
-1. Si la pregunta menciona, hace referencia, o puede responderse con alguna colección → responde ÚNICAMENTE con el nombre EXACTO de esa colección (copiado de la lista).
-2. Si la pregunta NO tiene ninguna relación con ninguna colección → responde ÚNICAMENTE con: general
-3. PROHIBIDO agregar explicaciones, signos de puntuación, comillas, saltos de línea o cualquier otro texto.
-4. Tu respuesta debe ser exactamente UNA línea.
-5. Ante la duda de si una pregunta es relevante para una colección, elige la colección (NO general).
+INSTRUCCIONES:
+- Si la pregunta menciona o se relaciona con una colección → responde el nombre de esa colección.
+- Si NO se relaciona con ninguna → responde: general
+- Ante la duda, elige la colección (NO general).
+- Responde SOLO el nombre. Sin explicaciones, sin puntuación, sin comillas.
 
 EJEMPLOS:
-Usuario: {example_question}
-Respuesta: {example_topic}
+Pregunta: ¿Puedes revisar mis documentos de {example_topic}?
+→ {example_topic}
 
-Usuario: ¿Cuánto es 2 + 2?
-Respuesta: general
+Pregunta: Tengo una pregunta sobre "{second_topic}"
+→ {second_topic}
 
-Usuario: ¿Qué dice mi documento sobre {example_topic}?
-Respuesta: {example_topic}"""
+Pregunta: Ve a mi colección de {example_topic} y resúmelo
+→ {example_topic}
+
+Pregunta: Hola, ¿cómo estás?
+→ general
+
+Pregunta: ¿Cuánto es 2 + 2?
+→ general"""
 
     return [
         {"role": "system", "content": system},
-        {"role": "user", "content": user_message},
+        {"role": "user", "content": f"Pregunta: {user_message}\n→"},
     ]
 
 

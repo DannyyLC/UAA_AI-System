@@ -9,6 +9,8 @@ Uso:
 
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Optional
 
 from src.shared.configuration import settings
@@ -59,6 +61,23 @@ def get_logger(
 
     handler.setFormatter(logging.Formatter(fmt, datefmt="%Y-%m-%d %H:%M:%S"))
     logger.addHandler(handler)
+
+    # --- File handler (siempre en plain format, sin colores ANSI) ---
+    logs_dir = Path("/app/logs")
+    try:
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        file_handler = RotatingFileHandler(
+            filename=logs_dir / f"{settings.service_name}.log",
+            maxBytes=10 * 1024 * 1024,  # 10 MB por archivo
+            backupCount=5,
+            encoding="utf-8",
+        )
+        file_handler.setLevel(log_level)
+        file_handler.setFormatter(logging.Formatter(PLAIN_FORMAT, datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(file_handler)
+    except OSError:
+        # Si no se puede escribir (ej. entorno local sin /app/logs), se ignora silenciosamente
+        pass
 
     # No propagar al root logger
     logger.propagate = False

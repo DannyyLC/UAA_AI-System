@@ -123,6 +123,7 @@ services:
       # General
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SERVICE_NAME=gateway
     depends_on:
       postgres:
         condition: service_healthy
@@ -170,6 +171,7 @@ services:
       # General
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SERVICE_NAME=auth
     depends_on:
       postgres:
         condition: service_healthy
@@ -212,6 +214,7 @@ services:
       # General
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SERVICE_NAME=chat
     depends_on:
       postgres:
         condition: service_healthy
@@ -253,6 +256,7 @@ services:
       # General
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SERVICE_NAME=indexing
     depends_on:
       postgres:
         condition: service_healthy

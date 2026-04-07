@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     environment: str = Field(default="development")  # development | staging | production
     log_level: str = Field(default="INFO")
     debug: bool = Field(default=False)
+    service_name: str = Field(default="app", description="Nombre del servicio (usado para el archivo de log)")
 
     model_config = {
         "env_file": ".env",

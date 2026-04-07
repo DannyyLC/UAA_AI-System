@@ -94,7 +94,7 @@ class QdrantManager:
         user_id: str,
         topic: Optional[str] = None,
         limit: int = 5,
-        score_threshold: float = 0.7,
+        score_threshold: float = 0.25,
     ) -> List[Dict[str, Any]]:
         """
         Busca documentos similares con filtros.
