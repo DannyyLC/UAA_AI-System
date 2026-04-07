@@ -28,6 +28,7 @@ export default function ChatPage() {
 
   const [chatStates, setChatStates] = useState<ModelChatState[]>([]);
   const [input, setInput] = useState("");
+  const [expectedAnswer, setExpectedAnswer] = useState("");
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -110,7 +111,7 @@ export default function ChatPage() {
         }
 
         // Stream the response (assistant message will be created on first token)
-        const stream = sendMessageStream(convId!, { content, model: state.model.id });
+        const stream = sendMessageStream(convId!, { content, model: state.model.id, expected_answer: expectedAnswer || undefined });
         
         for await (const chunk of stream) {
           if (chunk.type === "token") {
@@ -147,6 +148,9 @@ export default function ChatPage() {
                   ...last,
                   isStreaming: false,
                   used_rag: chunk.used_rag,
+                  similarity_score: chunk.similarity_score,
+                  has_similarity: chunk.has_similarity,
+                  expected_answer: expectedAnswer || undefined,
                 };
               }
               return {
@@ -222,6 +226,7 @@ export default function ChatPage() {
       }))
     );
     setInput("");
+    setExpectedAnswer("");
   };
 
   // Handle Enter key (Shift+Enter for new line)
@@ -301,45 +306,67 @@ export default function ChatPage() {
 
           {/* Input area */}
           <div className="border-t border-gray-800 bg-gray-900 p-4">
-            <div className="mx-auto flex max-w-5xl items-end gap-3">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Escribe tu pregunta... (Enter para enviar, Shift+Enter para nueva línea)"
-                rows={1}
-                className="flex-1 resize-none rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-h-32"
-                style={{ minHeight: "44px" }}
-                onInput={(e) => {
-                  const el = e.currentTarget;
-                  el.style.height = "auto";
-                  el.style.height = Math.min(el.scrollHeight, 128) + "px";
-                }}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || sending}
-                className="rounded-xl bg-indigo-600 p-3 text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sending ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 19V5m0 0l-7 7m7-7l7 7"
-                    />
+            <div className="mx-auto flex max-w-5xl flex-col gap-2">
+              {/* Expected answer — obligatorio */}
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                )}
-              </button>
+                  Respuesta esperada <span className="text-red-400">*</span>
+                </label>
+                <span className="text-[10px] text-gray-500">Requerida para calcular similitud de coseno</span>
+              </div>
+              <textarea
+                value={expectedAnswer}
+                onChange={(e) => setExpectedAnswer(e.target.value)}
+                placeholder="Escribe la respuesta que consideras correcta para esta pregunta..."
+                rows={2}
+                className="w-full resize-none rounded-xl border border-emerald-700/50 bg-emerald-950/30 px-4 py-2.5 text-sm text-emerald-200 placeholder-emerald-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+
+              {/* Main input row */}
+              <div className="flex items-end gap-3">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Escribe tu pregunta... (Enter para enviar, Shift+Enter para nueva línea)"
+                  rows={1}
+                  className="flex-1 resize-none rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-h-32"
+                  style={{ minHeight: "44px" }}
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    el.style.height = "auto";
+                    el.style.height = Math.min(el.scrollHeight, 128) + "px";
+                  }}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() || !expectedAnswer.trim() || sending}
+                  className="rounded-xl bg-indigo-600 p-3 text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  title={!expectedAnswer.trim() ? "La respuesta esperada es obligatoria" : undefined}
+                >
+                  {sending ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 19V5m0 0l-7 7m7-7l7 7"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

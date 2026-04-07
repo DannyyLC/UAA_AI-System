@@ -79,6 +79,36 @@ export default function ChatPanel({
                   <span className="inline-block ml-0.5 w-1.5 h-4 bg-indigo-400 animate-pulse" />
                 )}
               </div>
+              {/* Similarity score badge */}
+              {msg.role === "assistant" && msg.has_similarity && msg.similarity_score != null && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="flex-1 h-1 rounded-full bg-gray-700 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${(msg.similarity_score * 100).toFixed(1)}%`,
+                        background:
+                          msg.similarity_score >= 0.75
+                            ? "#22c55e"  // verde
+                            : msg.similarity_score >= 0.5
+                            ? "#eab308"  // amarillo
+                            : "#ef4444", // rojo
+                      }}
+                    />
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono font-semibold tabular-nums ${
+                      msg.similarity_score >= 0.75
+                        ? "text-green-400"
+                        : msg.similarity_score >= 0.5
+                        ? "text-yellow-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {(msg.similarity_score * 100).toFixed(1)}% similitud
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         ))}

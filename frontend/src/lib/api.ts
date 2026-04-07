@@ -104,12 +104,12 @@ export type ChatStreamChunk =
   | { type: "researching" }
   | { type: "rag_start" }
   | { type: "rag_done" }
-  | { type: "done"; message: ChatPanelMessage; used_rag: boolean }
+  | { type: "done"; message: ChatPanelMessage; used_rag: boolean; similarity_score: number | null; has_similarity: boolean }
   | { type: "error"; message: string };
 
 export async function* sendMessageStream(
   conversationId: string,
-  payload: { content: string; model: string }
+  payload: { content: string; model: string; expected_answer?: string }
 ): AsyncGenerator<ChatStreamChunk, void, unknown> {
   const url = `${BASE_URL}/chat/conversations/${conversationId}/messages`;
 
@@ -169,8 +169,19 @@ export async function* sendMessageStream(
         yield { type: "rag_done" };
       } else if (eventType === "done") {
         try {
-          const data = JSON.parse(dataStr) as { message: ChatPanelMessage; used_rag: boolean };
-          yield { type: "done", message: data.message, used_rag: data.used_rag };
+          const data = JSON.parse(dataStr) as {
+            message: ChatPanelMessage;
+            used_rag: boolean;
+            similarity_score: number | null;
+            has_similarity: boolean;
+          };
+          yield {
+            type: "done",
+            message: data.message,
+            used_rag: data.used_rag,
+            similarity_score: data.similarity_score,
+            has_similarity: data.has_similarity,
+          };
         } catch {
           // ignore parse errors
         }
