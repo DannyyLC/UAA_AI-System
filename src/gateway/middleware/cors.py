@@ -17,6 +17,9 @@ def setup_cors(app):
             "http://localhost:5173",  # Vite dev
             "http://127.0.0.1:3000",
             "http://127.0.0.1:5173",
+            "https://desarrollo.softweb.mx",
+            "http://desarrollo.softweb.mx",
+            "https://front-rag-five.vercel.app",
         ],
         allow_credentials=True,  # Necesario para cookies httpOnly
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
