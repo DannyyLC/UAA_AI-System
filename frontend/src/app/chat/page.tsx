@@ -78,6 +78,7 @@ export default function ChatPage() {
     if (!content || sending) return;
 
     setInput("");
+    setExpectedAnswer("");
     setSending(true);
 
     // Add user message to all panels
