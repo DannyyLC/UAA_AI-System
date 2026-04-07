@@ -19,3 +19,15 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #4b5563;
 }
+
+/* Autofill (Chrome/Safari) — elimina el fondo blanco que el navegador impone */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  /* box-shadow interno es el ÚNICO truco que anula el fondo de autofill */
+  -webkit-box-shadow: 0 0 0 1000px #1f2937 inset !important; /* bg-gray-800 */
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff;
+  transition: background-color 9999s ease-in-out 0s; /* delay infinito como fallback */
+}
