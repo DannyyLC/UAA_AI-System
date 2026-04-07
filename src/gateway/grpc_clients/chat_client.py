@@ -248,7 +248,7 @@ class ChatClient:
     # ============================================================
 
     async def send_message_stream(
-        self, conversation_id: str, user_id: str, content: str, model: str = ""
+        self, conversation_id: str, user_id: str, content: str, model: str = "", expected_answer: str = ""
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Envía un mensaje y recibe respuesta en streaming.
@@ -258,6 +258,7 @@ class ChatClient:
             user_id: ID del usuario
             content: Contenido del mensaje
             model: Modelo LLM a usar (opcional, vacío = default del servidor)
+            expected_answer: Respuesta esperada para cálculo de similitud (opcional)
 
         Yields:
             Diccionarios con chunks de la respuesta:
@@ -266,12 +267,18 @@ class ChatClient:
                 "token": "...", (si type=token)
                 "message": {...}, (si type=done)
                 "used_rag": bool, (si type=done)
+                "similarity_score": float | None, (si type=done)
+                "has_similarity": bool, (si type=done)
                 "error": {...} (si type=error)
             }
         """
         try:
             request = chat_pb2.SendMessageRequest(
-                conversation_id=conversation_id, user_id=user_id, content=content, model=model
+                conversation_id=conversation_id,
+                user_id=user_id,
+                content=content,
+                model=model,
+                expected_answer=expected_answer,
             )
 
             stream = self.stub.SendMessage(request)
@@ -311,6 +318,8 @@ class ChatClient:
                             "created_at": self._proto_timestamp_to_str(response.message.created_at),
                         },
                         "used_rag": response.used_rag,
+                        "similarity_score": response.similarity_score if response.has_similarity else None,
+                        "has_similarity": response.has_similarity,
                     }
 
                 # Error

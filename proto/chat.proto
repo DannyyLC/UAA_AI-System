@@ -122,8 +122,9 @@ message DeleteConversationResponse {
 message SendMessageRequest {
   string conversation_id = 1;
   string user_id = 2;
-  string content = 3; // Mensaje del usuario
-  string model = 4; // Referencia al tipo/id de modelo 
+  string content = 3;          // Mensaje del usuario
+  string model = 4;            // Referencia al tipo/id de modelo
+  string expected_answer = 5;  // Opcional: respuesta esperada para evaluación de similitud
 }
 
 // Streaming: el servidor envía chunks progresivos
@@ -141,10 +142,12 @@ message SendMessageResponse {
   }
 
   ChunkType chunk_type = 1;
-  string token = 2; // Token parcial (cuando chunk_type = TOKEN)
-  Message message = 3; // Mensaje completo (cuando chunk_type = DONE)
-  bool used_rag = 4; // Si se usó RAG en la respuesta
+  string token = 2;             // Token parcial (cuando chunk_type = TOKEN)
+  Message message = 3;          // Mensaje completo (cuando chunk_type = DONE)
+  bool used_rag = 4;            // Si se usó RAG en la respuesta
   common.v1.Error error = 5;
+  double similarity_score = 6;  // Similitud coseno 0.0–1.0 (solo cuando chunk_type=DONE y expected_answer fue provisto)
+  bool has_similarity = 7;      // True si se calculó la similitud
 }
 
 // --- GetMessages ---

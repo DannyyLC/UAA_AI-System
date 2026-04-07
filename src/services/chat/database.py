@@ -358,6 +358,7 @@ class ChatRepository:
         user_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
         expected_answer: Optional[str] = None,
+        similarity_score: Optional[float] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Registra una entrada de rendimiento de modelo.
@@ -370,7 +371,8 @@ class ChatRepository:
             response_time_ms: Tiempo de respuesta en milisegundos
             user_id: ID del usuario
             conversation_id: ID de la conversación
-            expected_answer: Respuesta esperada (pendiente de implementar)
+            expected_answer: Respuesta esperada (para evaluación de investigación)
+            similarity_score: Similitud coseno entre answer y expected_answer (0.0–1.0)
 
         Returns:
             Registro insertado
@@ -378,13 +380,14 @@ class ChatRepository:
         row = await self.db.fetchone(
             """
             INSERT INTO model_performance_logs
-                (question, answer, expected_answer, collection_name, model, response_time_ms, user_id, conversation_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid)
+                (question, answer, expected_answer, similarity_score, collection_name, model, response_time_ms, user_id, conversation_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8::uuid, $9::uuid)
             RETURNING id, created_at
             """,
             question,
             answer,
             expected_answer,
+            similarity_score,
             collection_name,
             model,
             response_time_ms,

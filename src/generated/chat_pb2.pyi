@@ -131,19 +131,21 @@ class DeleteConversationResponse(_message.Message):
     def __init__(self, success: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_common_pb2.Error, _Mapping]] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
-    __slots__ = ("conversation_id", "user_id", "content", "model")
+    __slots__ = ("conversation_id", "user_id", "content", "model", "expected_answer")
     CONVERSATION_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     CONTENT_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_ANSWER_FIELD_NUMBER: _ClassVar[int]
     conversation_id: str
     user_id: str
     content: str
     model: str
-    def __init__(self, conversation_id: _Optional[str] = ..., user_id: _Optional[str] = ..., content: _Optional[str] = ..., model: _Optional[str] = ...) -> None: ...
+    expected_answer: str
+    def __init__(self, conversation_id: _Optional[str] = ..., user_id: _Optional[str] = ..., content: _Optional[str] = ..., model: _Optional[str] = ..., expected_answer: _Optional[str] = ...) -> None: ...
 
 class SendMessageResponse(_message.Message):
-    __slots__ = ("chunk_type", "token", "message", "used_rag", "error")
+    __slots__ = ("chunk_type", "token", "message", "used_rag", "error", "similarity_score", "has_similarity")
     class ChunkType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         CHUNK_TYPE_UNSPECIFIED: _ClassVar[SendMessageResponse.ChunkType]
@@ -167,12 +169,16 @@ class SendMessageResponse(_message.Message):
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     USED_RAG_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    SIMILARITY_SCORE_FIELD_NUMBER: _ClassVar[int]
+    HAS_SIMILARITY_FIELD_NUMBER: _ClassVar[int]
     chunk_type: SendMessageResponse.ChunkType
     token: str
     message: Message
     used_rag: bool
     error: _common_pb2.Error
-    def __init__(self, chunk_type: _Optional[_Union[SendMessageResponse.ChunkType, str]] = ..., token: _Optional[str] = ..., message: _Optional[_Union[Message, _Mapping]] = ..., used_rag: bool = ..., error: _Optional[_Union[_common_pb2.Error, _Mapping]] = ...) -> None: ...
+    similarity_score: float
+    has_similarity: bool
+    def __init__(self, chunk_type: _Optional[_Union[SendMessageResponse.ChunkType, str]] = ..., token: _Optional[str] = ..., message: _Optional[_Union[Message, _Mapping]] = ..., used_rag: bool = ..., error: _Optional[_Union[_common_pb2.Error, _Mapping]] = ..., similarity_score: _Optional[float] = ..., has_similarity: bool = ...) -> None: ...
 
 class GetMessagesRequest(_message.Message):
     __slots__ = ("conversation_id", "user_id", "pagination")

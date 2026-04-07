@@ -105,7 +105,8 @@ CREATE TABLE IF NOT EXISTS model_performance_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     question TEXT NOT NULL,
     answer TEXT NOT NULL,
-    expected_answer TEXT,                            -- Pendiente de implementar
+    expected_answer TEXT,                            -- Respuesta esperada (para evaluación de investigación)
+    similarity_score DOUBLE PRECISION,               -- Similitud coseno vs expected_answer (0.0–1.0). NULL si no se proveyó expected_answer
     collection_name VARCHAR(255),                    -- Nombre de la colección / topic (NULL si general)
     model VARCHAR(255) NOT NULL,
     response_time_ms DOUBLE PRECISION NOT NULL,      -- Tiempo de respuesta en milisegundos

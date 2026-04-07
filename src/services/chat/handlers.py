@@ -517,6 +517,19 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             perf_end = time.perf_counter()
             response_time_ms = (perf_end - perf_start) * 1000
 
+            # Calcular similitud de coseno si se proveyó expected_answer
+            similarity_score = None
+            has_similarity = False
+            if request.expected_answer:
+                try:
+                    similarity_score = await self._compute_similarity(
+                        full_response, request.expected_answer
+                    )
+                    has_similarity = True
+                    logger.info(f"  → Similitud de coseno: {similarity_score:.4f}")
+                except Exception as sim_err:
+                    logger.warning(f"No se pudo calcular la similitud: {sim_err}")
+
             # 8. Guardar respuesta del asistente en DB
             logger.info("[ETAPA 7/7] GUARDADO — Guardando respuesta en DB")
             assistant_message = await self.repo.create_message(
@@ -538,9 +551,10 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                     response_time_ms=response_time_ms,
                     user_id=request.user_id,
                     conversation_id=request.conversation_id,
-                    expected_answer=None,
+                    expected_answer=request.expected_answer if request.expected_answer else None,
+                    similarity_score=similarity_score,
                 )
-                logger.info(f"  → Performance log guardado: modelo={resolved_model}, tiempo={response_time_ms:.1f}ms")
+                logger.info(f"  → Performance log guardado: modelo={resolved_model}, tiempo={response_time_ms:.1f}ms, similitud={similarity_score}")
             except Exception as perf_err:
                 logger.warning(f"No se pudo guardar performance log: {perf_err}")
 
@@ -570,6 +584,8 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
                     created_at=datetime_to_proto_timestamp(assistant_message["created_at"]),
                 ),
                 used_rag=used_rag,
+                similarity_score=similarity_score if similarity_score is not None else 0.0,
+                has_similarity=has_similarity,
             )
 
             logger.info(
@@ -691,3 +707,35 @@ class ChatServiceHandler(chat_pb2_grpc.ChatServiceServicer):
             "tool": chat_pb2.MESSAGE_ROLE_TOOL,
         }
         return role_map.get(role.lower(), chat_pb2.MESSAGE_ROLE_UNSPECIFIED)
+
+    async def _compute_similarity(self, text_a: str, text_b: str) -> float:
+        """
+        Calcula la similitud de coseno entre dos textos usando embeddings de OpenAI.
+
+        Usa el modelo text-embedding-3-small via LiteLLM.
+        Los embeddings de OpenAI están normalizados (L2=1), por lo que
+        el producto punto es equivalente a la similitud de coseno.
+
+        Args:
+            text_a: Primer texto (respuesta del LLM)
+            text_b: Segundo texto (respuesta esperada)
+
+        Returns:
+            Valor float entre 0.0 y 1.0 (1.0 = idénticos semánticamente)
+        """
+        import litellm
+
+        response = await litellm.aembedding(
+            model="text-embedding-3-small",
+            input=[text_a, text_b],
+        )
+
+        vec_a = response.data[0]["embedding"]
+        vec_b = response.data[1]["embedding"]
+
+        # Los embeddings de OpenAI ya están normalizados (|v| = 1)
+        # ∴ producto punto = similitud de coseno directamente
+        dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
+
+        # Clipear al rango [0.0, 1.0] por precaución ante errores de punto flotante
+        return max(0.0, min(1.0, float(dot_product)))

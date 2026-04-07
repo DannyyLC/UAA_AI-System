@@ -53,6 +53,11 @@ class SendMessageRequest(BaseModel):
 
     content: str = Field(min_length=1, max_length=10000)
     model: str = Field(default="", description="Modelo LLM a usar (vacío = default del servidor)")
+    expected_answer: str = Field(
+        default="",
+        max_length=10000,
+        description="Respuesta esperada (opcional). Si se provee, el sistema calculará la similitud de coseno con OpenAI embeddings.",
+    )
 
 
 class DeleteConversationResponse(BaseModel):
@@ -283,6 +288,7 @@ async def send_message(
                 user_id=current_user.user_id,
                 content=request.content,
                 model=request.model,
+                expected_answer=request.expected_answer,
             ):
                 # Formatear como SSE
                 event_type = chunk["type"]
@@ -307,7 +313,12 @@ async def send_message(
                     # Enviar metadata final
                     import json
 
-                    data = json.dumps({"message": chunk["message"], "used_rag": chunk["used_rag"]})
+                    data = json.dumps({
+                        "message": chunk["message"],
+                        "used_rag": chunk["used_rag"],
+                        "similarity_score": chunk.get("similarity_score"),
+                        "has_similarity": chunk.get("has_similarity", False),
+                    })
                     yield f"event: done\ndata: {data}\n\n"
 
                 elif event_type == "error":
