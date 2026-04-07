@@ -23,11 +23,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     let errorText: string;
     try {
       const data = await res.json();
-      errorText = (data as any)?.detail ?? JSON.stringify(data);
+      // El gateway puede devolver { detail: "..." } (FastAPI default)
+      // o { message: "..." } (exception handler custom del gateway)
+      errorText =
+        (data as any)?.detail ??
+        (data as any)?.message ??
+        JSON.stringify(data);
     } catch {
       errorText = await res.text();
     }
-    throw new Error(errorText || `Request failed with status ${res.status}`);
+    throw new Error(errorText || `Error ${res.status}`);
   }
 
   if (res.status === 204) {

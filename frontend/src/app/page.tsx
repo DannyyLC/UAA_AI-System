@@ -40,9 +40,16 @@ export default function LoginPage() {
         router.replace("/chat");
       }
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Error desconocido";
-      setError(msg);
+      const raw = err instanceof Error ? err.message : "Error desconocido";
+      // Mapear mensajes técnicos a textos amigables
+      const friendly: Record<string, string> = {
+        "Credenciales inválidas": "Correo o contraseña incorrectos. Verifica tus datos e intenta de nuevo.",
+        "El email ya está registrado": "Este correo ya tiene una cuenta. Inicia sesión o usa otro correo.",
+        "Datos de entrada inválidos": "Revisa que todos los campos estén correctos.",
+        "Servicio de autenticación no disponible": "El servicio no está disponible en este momento. Intenta más tarde.",
+        "Error interno del servidor": "Ocurrió un error inesperado. Intenta de nuevo en unos momentos.",
+      };
+      setError(friendly[raw] ?? raw);
     } finally {
       setSubmitting(false);
     }
@@ -80,8 +87,11 @@ export default function LoginPage() {
 
         {/* Error */}
         {error && (
-          <div className="rounded-lg bg-red-900/40 border border-red-700 p-3 text-sm text-red-300">
-            {error}
+          <div className="flex items-start gap-3 rounded-lg bg-red-900/30 border border-red-700/50 p-3.5 text-sm text-red-300">
+            <svg className="mt-0.5 h-4 w-4 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <span>{error}</span>
           </div>
         )}
 

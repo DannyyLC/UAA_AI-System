@@ -107,6 +107,8 @@ async def register(request: RegisterRequest, response: Response):
             message="Usuario registrado exitosamente. Por favor inicia sesión.", user=user_response
         )
 
+    except HTTPException:
+        raise
     except grpc.RpcError as e:
         logger.error(f"Error gRPC en registro: {e.code()} - {e.details()}")
 
@@ -176,6 +178,8 @@ async def login(request: LoginRequest, response: Response):
 
         return AuthResponse(message="Login exitoso", user=user_response)
 
+    except HTTPException:
+        raise
     except grpc.RpcError as e:
         logger.error(f"Error gRPC en login: {e.code()} - {e.details()}")
 
@@ -188,6 +192,11 @@ async def login(request: LoginRequest, response: Response):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=e.details() or "Datos de entrada inválidos",
+            )
+        elif e.code() == grpc.StatusCode.NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciales inválidas",
             )
         else:
             raise HTTPException(
