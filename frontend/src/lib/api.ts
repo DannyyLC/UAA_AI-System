@@ -7,7 +7,14 @@ import type {
   UserResponse,
 } from "./types";
 
-const BASE_URL = "/api/v1";
+const BASE_URL = "https://desarrollo.softweb.mx/api/v1";
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -32,7 +39,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     } catch {
       errorText = await res.text();
     }
-    throw new Error(errorText || `Error ${res.status}`);
+    throw new ApiError(errorText || `Error ${res.status}`, res.status);
   }
 
   if (res.status === 204) {

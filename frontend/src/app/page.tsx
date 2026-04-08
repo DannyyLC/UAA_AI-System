@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import { ApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -40,16 +41,23 @@ export default function LoginPage() {
         router.replace("/chat");
       }
     } catch (err: unknown) {
-      const raw = err instanceof Error ? err.message : "Error desconocido";
-      // Mapear mensajes técnicos a textos amigables
-      const friendly: Record<string, string> = {
-        "Credenciales inválidas": "Correo o contraseña incorrectos. Verifica tus datos e intenta de nuevo.",
-        "El email ya está registrado": "Este correo ya tiene una cuenta. Inicia sesión o usa otro correo.",
-        "Datos de entrada inválidos": "Revisa que todos los campos estén correctos.",
-        "Servicio de autenticación no disponible": "El servicio no está disponible en este momento. Intenta más tarde.",
-        "Error interno del servidor": "Ocurrió un error inesperado. Intenta de nuevo en unos momentos.",
-      };
-      setError(friendly[raw] ?? raw);
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
+          setError("Correo o contraseña incorrectos. Verifica tus datos e intenta de nuevo.");
+        } else if (err.status === 409) {
+          setError("Este correo ya tiene una cuenta. Inicia sesión o usa otro correo.");
+        } else if (err.status === 422) {
+          setError("Revisa que todos los campos estén correctos.");
+        } else if (err.status >= 500) {
+          setError("Ocurrió un error inesperado. Intenta de nuevo en unos momentos.");
+        } else {
+          setError(err.message);
+        }
+      } else if (err instanceof Error && err.message.toLowerCase().includes("failed to fetch")) {
+        setError("No se pudo conectar al servidor. Verifica tu conexión e intenta de nuevo.");
+      } else {
+        setError(err instanceof Error ? err.message : "Error desconocido");
+      }
     } finally {
       setSubmitting(false);
     }

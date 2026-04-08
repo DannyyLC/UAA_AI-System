@@ -25,8 +25,8 @@ router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 # Configuración de cookies
 COOKIE_NAME = "access_token"
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"  # true en producción
-COOKIE_SAMESITE = "lax"  # 'lax' o 'strict' en producción
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "true").lower() == "true"  # true en producción
+COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "none")  # 'none' para cross-site (Vercel → API)
 COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)  # None para desarrollo local
 JWT_EXPIRATION_MINUTES = int(os.getenv("JWT_EXPIRATION_MINUTES", "60"))
 
@@ -58,7 +58,13 @@ def clear_auth_cookie(response: Response):
     Args:
         response: Response de FastAPI
     """
-    response.delete_cookie(key=COOKIE_NAME, path="/", domain=COOKIE_DOMAIN)
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        path="/",
+        domain=COOKIE_DOMAIN,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+    )
 
 
 @router.post(
