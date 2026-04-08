@@ -14,6 +14,7 @@ def setup_cors(app):
         CORSMiddleware,
         allow_origins=[
             "http://localhost:3000",  # React/Next.js dev
+            "http://localhost:3001",
             "http://localhost:5173",  # Vite dev
             "http://127.0.0.1:3000",
             "http://127.0.0.1:5173",
@@ -23,6 +24,6 @@ def setup_cors(app):
         ],
         allow_credentials=True,  # Necesario para cookies httpOnly
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        allow_headers=["*"],
-        expose_headers=["*"],
+        allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "Cookie"],
+        expose_headers=["Set-Cookie"],
     )
